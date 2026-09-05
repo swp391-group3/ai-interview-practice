@@ -9,10 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"ai-interview-practice-api/internal/config"
-	"ai-interview-practice-api/internal/service"
-	server "ai-interview-practice-api/internal/transport/http"
-	"ai-interview-practice-api/internal/util"
+	"ai-interview-practice-api/internal/shared/config"
+	server "ai-interview-practice-api/internal/shared/transport/http"
+	"ai-interview-practice-api/pkg/util"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -46,15 +45,14 @@ func build() (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	authSvc := service.NewAuthService(pool, &cfg)
 
-	return server.New(&cfg, authSvc).Build(), nil
+	return server.Build(&cfg, pool), nil
 }
 
 func main() {
 	server, err := build()
 	if err != nil {
-		panic(fmt.Sprintf("http server error: %s", err))
+		panic(fmt.Sprintf("initialization error: %s", err))
 	}
 
 	done := make(chan bool, 1)

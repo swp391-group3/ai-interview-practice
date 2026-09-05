@@ -3,8 +3,8 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 
-	"ai-interview-practice-api/internal/transport/http/response"
 	"ai-interview-practice-api/pkg/apperror"
+	"ai-interview-practice-api/pkg/response"
 )
 
 type LoginRequest struct {
@@ -19,7 +19,7 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
-	tokenPair, err := s.authSvc.Login(c.Request.Context(), req.Email, req.Password)
+	tokenPair, err := s.svc.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		response.Error(c, err)
 		return
