@@ -1,0 +1,78 @@
+export type InterviewState =
+  | "IDLE"
+  | "CONNECTING"
+  | "ASSET_LOADING"
+  | "INTERVIEWER_SPEAKING"
+  | "LISTENING"
+  | "PROCESSING_ANSWER"
+  | "TRANSITIONING"
+  | "PAUSED"
+  | "RECONNECTING"
+  | "DEGRADED_2D"
+  | "COMPLETED"
+  | "TERMINATED_EARLY"
+  | "FATAL_ERROR";
+export type InterviewEvent =
+  | "START"
+  | "CONNECTED"
+  | "ASSETS_READY"
+  | "SPEECH_ENDED"
+  | "ANSWER_SUBMITTED"
+  | "ANSWER_PROCESSED"
+  | "NEXT_QUESTION"
+  | "PAUSE"
+  | "RESUME"
+  | "CONNECTION_LOST"
+  | "RECONNECTED"
+  | "AVATAR_UNAVAILABLE"
+  | "CONTINUE_2D"
+  | "COMPLETE"
+  | "TERMINATE"
+  | "FAIL"
+  | "RESET";
+const transitions: Partial<
+  Record<InterviewState, Partial<Record<InterviewEvent, InterviewState>>>
+> = {
+  IDLE: { START: "CONNECTING" },
+  CONNECTING: { CONNECTED: "ASSET_LOADING" },
+  ASSET_LOADING: {
+    ASSETS_READY: "INTERVIEWER_SPEAKING",
+    AVATAR_UNAVAILABLE: "DEGRADED_2D",
+  },
+  INTERVIEWER_SPEAKING: {
+    SPEECH_ENDED: "LISTENING",
+    PAUSE: "PAUSED",
+    AVATAR_UNAVAILABLE: "DEGRADED_2D",
+  },
+  LISTENING: { ANSWER_SUBMITTED: "PROCESSING_ANSWER", PAUSE: "PAUSED" },
+  PROCESSING_ANSWER: { ANSWER_PROCESSED: "TRANSITIONING" },
+  TRANSITIONING: {
+    NEXT_QUESTION: "INTERVIEWER_SPEAKING",
+    COMPLETE: "COMPLETED",
+    PAUSE: "PAUSED",
+  },
+  PAUSED: { RESUME: "RECONNECTING" },
+  RECONNECTING: { RECONNECTED: "ASSET_LOADING" },
+  DEGRADED_2D: { CONTINUE_2D: "INTERVIEWER_SPEAKING", PAUSE: "PAUSED" },
+};
+const terminalStates: readonly InterviewState[] = [
+  "COMPLETED",
+  "TERMINATED_EARLY",
+  "FATAL_ERROR",
+];
+/** Local lifecycle foundation, not a wire protocol.
+ * Resume always requires synchronization; invalid events are deterministic no-ops.
+ * DEGRADED_2D is a fallback acknowledgement gate, not a persistent rendering mode.
+ */
+export function transition(
+  state: InterviewState,
+  event: InterviewEvent,
+): InterviewState {
+  if (terminalStates.includes(state)) return event === "RESET" ? "IDLE" : state;
+  if (state !== "IDLE") {
+    if (event === "FAIL") return "FATAL_ERROR";
+    if (event === "TERMINATE") return "TERMINATED_EARLY";
+    if (event === "CONNECTION_LOST") return "RECONNECTING";
+  }
+  return transitions[state]?.[event] ?? state;
+}

@@ -1,0 +1,38 @@
+const segment = (value: string) => encodeURIComponent(value);
+export const routes = {
+  home: "/",
+  pricing: "/pricing",
+  login: "/login",
+  register: "/register",
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
+  dashboard: "/dashboard",
+  history: "/history",
+  billing: "/billing",
+  profile: "/profile",
+  settings: "/settings",
+  interviews: {
+    root: "/interviews",
+    new: {
+      jobDescription: "/interviews/new/job-description",
+      skills: "/interviews/new/skills",
+      setup: "/interviews/new/setup",
+      interviewer: "/interviews/new/interviewer",
+      preflight: "/interviews/new/preflight",
+    },
+    room: (id: string) => `/interviews/${segment(id)}/room`,
+  },
+  reports: { detail: (id: string) => `/reports/${segment(id)}` },
+  admin: {
+    root: "/admin",
+    dashboard: "/admin/dashboard",
+    users: "/admin/users",
+    interviews: "/admin/interviews",
+    domains: "/admin/domains",
+    questions: "/admin/questions",
+    avatars: "/admin/avatars",
+    voices: "/admin/voices",
+    billing: "/admin/billing",
+    settings: "/admin/settings",
+  },
+} as const;

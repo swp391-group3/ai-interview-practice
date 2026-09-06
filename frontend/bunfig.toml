@@ -1,0 +1,3 @@
+# Native Bun discovers only the bridge; Vitest owns src tests.
+[test]
+root = "./tests/bun"
