@@ -94,7 +94,7 @@ When Figma access is restored, resume in this order without creating another fil
 
 1. Inspect and clean up any empty `RoleCue / Semantic color` collection that may have been created before the mode-limit error.
 2. Complete Foundations Sections 00–13, text/effect styles, and the local component families.
-3. Build Marketing desktop/mobile frames using the approved RoleCue lockup and existing 3D hero as a media-container reference.
+3. Build Marketing desktop/mobile frames using the approved RoleCue lockup and the approved landing media-container reference.
 4. Build Product Sections A–U from the exact 80-frame inventory; validate each section with metadata and screenshots.
 5. Run a final consistency and accessibility review across Landing, Auth, Dashboard, JD, Setup, Preflight, Interview, Report, Billing, and Admin.
 6. Only after human approval, translate the verified screens into Next.js feature work using the existing route and API boundaries.

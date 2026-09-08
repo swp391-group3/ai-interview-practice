@@ -18,6 +18,3 @@ design/**/assets/*.zip
 design/**/assets/**/*.zip
 design/**/assets/*.tar*
 design/**/assets/**/*.tar*
-design/**/scenes/*.blend[1-9]
-design/**/renders/blockout/
-design/**/renders/lookdev/
