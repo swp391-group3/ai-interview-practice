@@ -30,6 +30,7 @@ All paths are relative to `frontend/`.
 
 ### Visual grammar
 
+- **Current live visual reference:** `https://open-design.ai/` (use for current visual grammar and interaction behavior; do not copy its branding or marketing content)
 - **Reference reconstruction HTML:** `design/exploration/open-design-study/reference-study.html`
 - **Visual reference audit:** `design/exploration/open-design-study/REFERENCE-AUDIT.md`
 - **Reference design tokens:** `design/exploration/open-design-study/TOKENS.css`
