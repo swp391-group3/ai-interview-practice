@@ -25,22 +25,19 @@ The page uses an editorial, near-white canvas with dark ink and a single acid-gr
 - Use the acid accent only for selection geometry, a badge, and contained visual details. Do not add a second page-level accent.
 - The condensed navigation becomes a white translucent pill after 64 px of scroll.
 - Cards are reserved for the dark program chapter. Elsewhere, borders and spacing define groups.
-- Media remains inside a measured 16:9, 3:2, or 4:5 frame. The delivered production render has each responsive crop available in `assets/`.
+- Media remains inside a measured 16:9, 3:2, or 4:5 frame. The landing hero is a polished 2D/editorial composition built from layout, typography, environmental washes, construction geometry, and framed interface detail; it is not a render dependency.
 
 ## Figma handoff
 
 1. Create a 1360 px desktop content frame with 64 px side padding; use 20 px side padding at mobile.
 2. Set display text to Albert Sans 820, -7.3% tracking, 0.91 line-height. Large section titles use 790 with -6.4% tracking.
 3. Use a 16 px hero radius and 22 px dark-stage radius. Keep all structural borders at 1 px.
-4. Preserve the hero crop contract: 16:9 at desktop, 3:2 between 621–1024 px, 4:5 at 620 px and below.
+4. Preserve the hero composition contract: 16:9 at desktop, 3:2 between 621–1024 px, and 4:5 at 620 px and below. Recompose the 2D editorial media at each breakpoint instead of supplying image crops.
 5. Prototype button lift at 3 px over 180 ms and section reveals at 700 ms with a 22 px upward travel. Respect reduced-motion preferences by rendering visible states without transitions.
 6. Maintain one primary action per action group. The mobile header reduces to mark plus menu control; the document body stays single-column below 760 px.
 
 ## Asset inventory
 
 - `assets/fonts/fonts.css` — local Albert Sans font-face declarations
-- `assets/datn-hero-16x9.webp` — 1920 × 1080 desktop hero
-- `assets/datn-hero-3x2.webp` — 1440 × 960 tablet hero
-- `assets/datn-hero-4x5.webp` — 960 × 1200 mobile hero
 
-The supplied renders depict an interview-practice product environment. They remain credited as the user-provided production asset and should be replaced only when DATN’s final product imagery is ready.
+The former `datn-hero-16x9.webp`, `datn-hero-3x2.webp`, and `datn-hero-4x5.webp` render crops are intentionally obsolete and absent. Do not restore, recreate, or replace them with Blender, realtime 3D, Three.js, R3F, GLB, or WebGL. The production landing should instead use a lightweight 2D/editorial hero composition consistent with the current OpenDesign reference and RoleCue brand system.

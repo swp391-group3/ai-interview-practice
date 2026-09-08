@@ -20,7 +20,13 @@ All paths are relative to `frontend/`.
 
 - **Final landing HTML:** `design/exploration/datn/datn-landing.html`
 - **Design system & handoff notes:** `design/exploration/datn/DATN-DESIGN-SYSTEM.md`
-- **Local responsive landing assets:** `design/exploration/datn/assets/` (hero media crops: 16:9, 3:2, 4:5; typography fonts)
+- **Local landing assets:** `design/exploration/datn/assets/` (approved typography fonts)
+
+### Hero media direction
+
+- The former DATN hero renders (`datn-hero-16x9.webp`, `datn-hero-3x2.webp`, and `datn-hero-4x5.webp`) are intentionally obsolete and are not expected to exist in this repository.
+- Reimplement the hero as a polished 2D editorial media composition. Match the approved OpenDesign grammar through typography, environmental treatment, construction geometry, framing, and restrained motion rather than restoring or replacing those renders.
+- Realtime 3D, Blender-derived renders, Three.js, R3F, GLB, and WebGL are deferred and must not be introduced for this purpose.
 
 ### Visual grammar
 
@@ -61,6 +67,7 @@ All paths are relative to `frontend/`.
   - media proportions
 - Do not invent a new visual direction unless explicitly requested.
 - RoleCue branding must replace any old DATN/SEP490 placeholder branding.
+- Treat obsolete image references inside the historical DATN landing HTML as conceptual visual guidance only; they are not production asset dependencies.
 
 ## 3D status
 
