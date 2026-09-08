@@ -5,7 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"ai-interview-practice-api/internal/shared/config"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/config"
 )
 
 type AuthService interface {

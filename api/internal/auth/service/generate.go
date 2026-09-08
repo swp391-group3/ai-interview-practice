@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/google/uuid"
 
-	"ai-interview-practice-api/pkg/token"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/token"
 )
 
 func (s *AuthServiceImpl) GenerateTokenPair(id uuid.UUID) (*TokenPair, error) {
