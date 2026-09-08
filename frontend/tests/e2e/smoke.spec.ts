@@ -4,8 +4,15 @@ test("public, wizard and admin routes render without a backend", async ({
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Welcome to Interview Practice" }),
+    page.getByRole("heading", {
+      name: "Practice the role before the room.",
+    }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Start a practice" }).first(),
+  ).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(page.locator(":focus")).toHaveAttribute("href", "#main-content");
   await page.goto("/interviews");
   await page
     .getByRole("link", { name: "Create an interview", exact: true })
