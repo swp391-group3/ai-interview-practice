@@ -41,7 +41,7 @@ An end-to-end web platform featuring:
 | **3D Avatar & Graphics** | Three.js, `@react-three/fiber`, `@react-three/drei` | Real-time GLTF/GLB avatar rendering and blend-shape animation |
 | **Speech & Audio** | Web Audio API, MediaRecorder API | Real-time candidate audio capture, VAD (Voice Activity Detection) |
 | **Backend Framework** | Golang (Go 1.23+), Gin / Chi Web Framework | High concurrency, low latency, robust WebSocket handling |
-| **Database & ORM** | PostgreSQL 16+, `pgx` / GORM / Goose migrations | ACID compliance, relational integrity, JSONB support for blueprints |
+| **Database Access & Migration** | PostgreSQL 16+, `pgx` / sqlc / golang-migrate | ACID compliance, relational integrity, JSONB support for blueprints |
 | **Cache & Queue** | Redis 7+ | Session state, rate limiting, pub/sub for WebSocket events |
 | **AI LLM Orchestration** | OpenAI / Gemini API / Claude 3.5 Sonnet | Structured output parsing (JSON schema), adaptive dialog generation |
 | **Speech-to-Text (STT)** | OpenAI Whisper API / Deepgram Nova-2 | High-accuracy technical transcription with latency < 500ms |
@@ -64,9 +64,9 @@ go tool cover -html=coverage.out -o coverage.html
 # Linting & Static Analysis
 golangci-lint run --timeout=5m
 
-# Database Migrations (Goose)
-goose -dir ./migrations postgres "postgres://postgres:password@localhost:5432/ai_interview?sslmode=disable" up
-goose -dir ./migrations postgres "postgres://postgres:password@localhost:5432/ai_interview?sslmode=disable" down
+# Database Migrations (golang-migrate)
+migrate -path ./migrations -database "postgres://postgres:password@localhost:5432/ai_interview?sslmode=disable" up
+migrate -path ./migrations -database "postgres://postgres:password@localhost:5432/ai_interview?sslmode=disable" down 1
 
 # Build Production Binary
 CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o bin/server cmd/server/main.go
@@ -151,7 +151,7 @@ graduation-thesis/
 │   │   │   ├── stt/                 # Whisper / Deepgram speech recognition
 │   │   │   └── tts/                 # Speech synthesis + viseme extractors
 │   │   └── middleware/              # JWT auth, RBAC, CORS, rate limiting
-│   ├── migrations/                  # Goose SQL migrations
+│   ├── migrations/                  # golang-migrate SQL migrations
 │   ├── pkg/                         # Reusable utilities (logger, errors, validator)
 │   ├── go.mod
 │   └── go.sum
@@ -198,62 +198,10 @@ graduation-thesis/
 ## 4. Code Style & Engineering Conventions
 
 ### 4.1 Golang Code Conventions
-- **Clean Architecture & Explicit Dependency Injection:** Structs accept dependencies via constructors (`NewService(repo, client)`).
-- **Error Handling:** Wrap errors with contextual information (`fmt.Errorf("parsing JD failed: %w", err)`). Never discard errors.
-- **Context Propagation:** All database and external I/O operations must accept `ctx context.Context`.
-- **Domain Decoupling:** Domain entities contain no HTTP/database tags; delivery handlers convert between HTTP DTOs and Domain Models.
-
-#### Good Golang Code Example
-```go
-// internal/usecase/jd_usecase.go
-package usecase
-
-import (
-	"context"
-	"fmt"
-	"time"
-
-	"graduation-thesis/backend/internal/domain"
-)
-
-type JDUsecase struct {
-	jdRepo    domain.JobDescriptionRepository
-	llmClient domain.LLMClient
-}
-
-func NewJDUsecase(repo domain.JobDescriptionRepository, llm domain.LLMClient) *JDUsecase {
-	return &JDUsecase{jdRepo: repo, llmClient: llm}
-}
-
-func (u *JDUsecase) ParseAndCreateBlueprint(ctx context.Context, candidateID string, rawJD string) (*domain.JobDescription, error) {
-	if len(rawJD) < 50 {
-		return nil, domain.ErrInvalidJDLength
-	}
-
-	analysisResult, err := u.llmClient.ExtractJDSkills(ctx, rawJD)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract skills from JD via LLM: %w", err)
-	}
-
-	jd := &domain.JobDescription{
-		ID:                domain.NewUUID(),
-		CandidateID:       candidateID,
-		RawContent:        rawJD,
-		ExtractedTitle:    analysisResult.Title,
-		ExtractedDomains:  analysisResult.Domains,
-		RequiredSkills:    analysisResult.Skills,
-		SuggestedLevel:    analysisResult.SuggestedLevel,
-		Status:            domain.JDStatusParsed,
-		CreatedAt:         time.Now().UTC(),
-	}
-
-	if err := u.jdRepo.Save(ctx, jd); err != nil {
-		return nil, fmt.Errorf("failed to persist parsed JD: %w", err)
-	}
-
-	return jd, nil
-}
-```
+- **Error Handling:** Use the project's `apperror` package for application and API errors. Do not expose internal errors directly to API consumers.
+- **Database Access:** Use `sqlc`-generated database access code for PostgreSQL queries.
+- **Migration:** Use `golang-migrate` for PostgreSQL schema migrations.
+- **Implementation Accuracy:** The specification should describe the backend structure and conventions actually used by the project rather than prescribing Clean Architecture, a specific dependency-injection pattern, or domain-layer abstractions.
 
 ### 4.2 Frontend (TypeScript / React) Conventions
 - **Strict TypeScript:** `noImplicitAny: true`, `strictNullChecks: true`.
@@ -392,10 +340,6 @@ flowchart TB
         AudioEngine["Web Audio / Mic Streamer"]
     end
 
-    subgraph Gateway["Load Balancer & API Router"]
-        Nginx["Reverse Proxy / TLS Termination"]
-    end
-
     subgraph Backend["Golang Backend Application"]
         HTTPHandler["REST API Handlers (Auth, JD, Interview, Admin)"]
         WSHandler["WebSocket Hub (Session Orchestrator)"]
@@ -413,11 +357,9 @@ flowchart TB
         Redis[(Redis 7 Cache & Session Store)]
     end
 
-    UI -->|HTTPS / REST| Nginx
-    AvatarEngine <-->|WebSocket Stream| Nginx
-    AudioEngine <-->|Audio Chunks| Nginx
-    Nginx --> HTTPHandler
-    Nginx --> WSHandler
+    UI -->|HTTPS / REST| HTTPHandler
+    AvatarEngine <-->|WebSocket Stream| WSHandler
+    AudioEngine <-->|Audio Chunks| WSHandler
 
     HTTPHandler --> Postgres
     HTTPHandler --> Redis
@@ -475,12 +417,17 @@ sequenceDiagram
 ## 9. Database Schema Design (PostgreSQL)
 
 ```sql
+CREATE TYPE seniority_level AS ENUM ('JUNIOR', 'MIDDLE', 'SENIOR', 'LEAD');
+CREATE TYPE status AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'INTERRUPTED');
+
 -- 1. Users Table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
+    date_of_birth DATE,
+    phone VARCHAR(30),
     role VARCHAR(50) NOT NULL DEFAULT 'CANDIDATE', -- 'ADMIN', 'CANDIDATE'
     is_locked BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -492,7 +439,8 @@ CREATE TABLE technical_domains (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) UNIQUE NOT NULL, -- e.g. 'Backend Development', 'DevOps', 'Frontend'
     description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE skills (
@@ -500,7 +448,8 @@ CREATE TABLE skills (
     domain_id UUID REFERENCES technical_domains(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL, -- e.g. 'Golang', 'PostgreSQL', 'Docker'
     category VARCHAR(50) NOT NULL, -- 'Language', 'Database', 'Framework', 'Tool'
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 3. Job Descriptions (JD)
@@ -510,7 +459,8 @@ CREATE TABLE job_descriptions (
     title VARCHAR(255) NOT NULL,
     raw_content TEXT NOT NULL,
     extracted_data JSONB NOT NULL, -- { domains: [], skills: [], level: "Senior", requirements: [] }
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 4. 3D Avatars & Voice Personas
@@ -523,7 +473,8 @@ CREATE TABLE avatar_profiles (
     voice_id VARCHAR(100) NOT NULL, -- Azure / ElevenLabs Voice identifier
     speaking_speed NUMERIC(3, 2) DEFAULT 1.0,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 5. Interview Sessions
@@ -532,14 +483,15 @@ CREATE TABLE interview_sessions (
     candidate_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     jd_id UUID NOT NULL REFERENCES job_descriptions(id) ON DELETE RESTRICT,
     avatar_id UUID NOT NULL REFERENCES avatar_profiles(id) ON DELETE RESTRICT,
-    difficulty VARCHAR(50) NOT NULL, -- 'JUNIOR', 'MIDDLE', 'SENIOR'
+    difficulty seniority_level NOT NULL,
     target_duration_minutes INT NOT NULL DEFAULT 30,
-    status VARCHAR(50) NOT NULL DEFAULT 'CREATED', -- 'CREATED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'INTERRUPTED'
+    status status NOT NULL DEFAULT 'CREATED',
     total_questions INT NOT NULL DEFAULT 5,
-    blueprint JSONB NOT NULL, -- Ordered plan of target topics & questions
+    blueprint JSONB NOT NULL, -- Session-level snapshot of the interview blueprint used for this interview
     started_at TIMESTAMPTZ,
     ended_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 6. Interview Question & Turn Transcripts
@@ -553,7 +505,8 @@ CREATE TABLE session_turns (
     candidate_transcript TEXT,
     is_follow_up BOOLEAN DEFAULT FALSE,
     turn_duration_seconds INT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 7. AI Evaluations & Performance Reports
@@ -572,7 +525,8 @@ CREATE TABLE performance_reports (
     weaknesses JSONB NOT NULL, -- ["Missed database isolation levels nuances"]
     actionable_recommendations JSONB NOT NULL,
     question_evaluations JSONB NOT NULL, -- Detailed feedback per question
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
@@ -690,7 +644,7 @@ CREATE TABLE performance_reports (
     "type": "json_object",
     "schema": {
       "title": "string",
-      "seniority_level": "JUNIOR | MIDDLE | SENIOR | LEAD",
+      "seniority_level": "configured seniority_level value",
       "core_domains": ["string"],
       "must_have_skills": ["string"],
       "nice_to_have_skills": ["string"],
@@ -731,5 +685,4 @@ Scores are normalized from 0 to 100 based on rubric criteria:
 
 ### Review Decisions Needed from Supervisor / Team:
 1. **Speech Service Choice:** Should we default to Azure Speech Services (which provides native phoneme/viseme timestamps out of the box) or OpenAI Whisper + ElevenLabs / Rhubarb Lip Sync?
-2. **Real-Time Video Camera:** Do we require candidate webcam facial expression analysis for this thesis scope, or is voice audio + 3D avatar interaction the primary focus?
 3. **Code Editor / Coding Sandbox:** Is live coding (Monaco editor execution) required during the interview, or is the platform purely conceptual / architectural technical dialog?
