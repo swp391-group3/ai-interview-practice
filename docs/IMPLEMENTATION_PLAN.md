@@ -117,35 +117,17 @@ stateDiagram-v2
 
 ### Phase 1: Project Setup & Infrastructure Foundation
 
-#### Task 1.1: Backend Go Skeleton, Clean Architecture Layout & Config Loader
-- **Description:** Initialize Golang 1.23+ module with clean architecture directories (`internal/domain`, `usecase`, `repository`, `delivery`, `platform`, `pkg`), strongly-typed environment config loader (`pkg/config`), structured logger (`pkg/logger` with Zap), and basic HTTP server with graceful shutdown.
-- **Task Architecture & Layering Diagram:**
-```mermaid
-flowchart TD
-    subgraph HTTP ["Delivery Layer (HTTP / WS)"]
-        Router["Router / Endpoints"]
-        AuthMW["Auth & Rate-Limit Middleware"]
-        Handler["REST & WS Handlers"]
-    end
-
-    subgraph Core ["Application Core"]
-        Usecase["Use Cases & Orchestrators"]
-        Domain["Domain Entities & Business Rules"]
-    end
-
-    subgraph DataInfra ["Infrastructure Layer"]
-        Repo["PostgreSQL Repositories"]
-        LLMAdapters["LLM, STT & TTS Adapters"]
-        ConfigPkg["Config Loader & Zap Logger"]
-    end
-
-    Router --> AuthMW --> Handler
-    Handler --> Usecase
-    Usecase --> Domain
-    Usecase --> Repo
-    Usecase --> LLMAdapters
-    Repo --> Domain
-    ConfigPkg -. Injects Config .-> Handler & Usecase & Repo
+#### Task 1.1: Backend Go Skeleton & Config Loader
+- **Description:** Initialize the Golang 1.23+ backend using the structure already established in the repository, including `cmd/server` for the application entry point, the existing `internal` packages for application code, `pkg/config` for environment configuration, `pkg/logger` for structured logging with Zap, and the HTTP server with graceful shutdown.
+- **Project Structure Reference:**
+```text
+backend/
+├── cmd/server/main.go
+├── internal/              # Existing application packages
+│   └── delivery/http/     # Existing HTTP routing and handlers
+└── pkg/
+    ├── config/
+    └── logger/
 ```
 - **Observable Acceptance Criteria:**
   - [ ] `pkg/config.LoadConfig()` parses environment variables (`PORT`, `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `AI_API_KEY`) and fails fast with descriptive errors if required keys are missing.
@@ -158,10 +140,10 @@ flowchart TD
   - [ ] Build binary: `go build -o bin/server cmd/server/main.go`
 - **Dependencies:** None
 - **Files touched:** `backend/go.mod`, `backend/cmd/server/main.go`, `backend/pkg/config/config.go`, `backend/pkg/logger/logger.go`, `backend/internal/delivery/http/router.go`
-- **Scope & Risk:** Medium (4 files) | **Risk:** Low
+- **Scope & Risk:** Medium (5 files) | **Risk:** Low
 
-#### Task 1.2: PostgreSQL Schema Migrations (Goose) & Connection Pooling
-- **Description:** Implement PostgreSQL `pgxpool` connection manager (`pkg/postgres`) and create Goose SQL migration `00001_initial_schema.sql` establishing the 7 core tables (`users`, `technical_domains`, `skills`, `job_descriptions`, `avatar_profiles`, `interview_sessions`, `session_turns`, `performance_reports`).
+#### Task 1.2: PostgreSQL Schema Migrations (golang-migrate) & Connection Pooling
+- **Description:** Implement PostgreSQL `pgxpool` connection manager (`pkg/postgres`) and create `golang-migrate` SQL migrations (`000001_initial_schema.up.sql` / `000001_initial_schema.down.sql`) establishing the 8 core tables (`users`, `technical_domains`, `skills`, `job_descriptions`, `avatar_profiles`, `interview_sessions`, `session_turns`, `performance_reports`).
 - **Entity Relationship (ER) Schema Diagram:**
 ```mermaid
 erDiagram
@@ -253,7 +235,7 @@ erDiagram
 - **Edge Cases & Error Handling:**
   - [ ] Database downtime causes automatic retry with exponential backoff (up to 5 attempts) before failing.
 - **Verification:**
-  - [ ] Migration up/down: `goose -dir ./migrations postgres "$DATABASE_URL" up && goose -dir ./migrations postgres "$DATABASE_URL" down`
+  - [ ] Migration up/down: `migrate -path ./migrations -database "$DATABASE_URL" up && migrate -path ./migrations -database "$DATABASE_URL" down 1`
   - [ ] Integration test: `go test -v ./pkg/postgres/...`
 - **Dependencies:** Task 1.1
 - **Files touched:** `backend/migrations/00001_initial_schema.sql`, `backend/migrations/00002_seed_initial_data.sql`, `backend/pkg/postgres/postgres.go`, `backend/Makefile`
@@ -289,7 +271,7 @@ flowchart TD
 - **Scope & Risk:** Medium (5 files) | **Risk:** Low
 
 #### Task 1.4: Docker Compose Multi-Service Development Environment
-- **Description:** Create `docker-compose.dev.yml` provisioning PostgreSQL 16, Redis 7, backend service with hot-reload via Air, and Next.js frontend with shared volume mounts and health check dependencies.
+- **Description:** Create `docker-compose.dev.yml` provisioning PostgreSQL 16, Redis 7, backend service with hot-reload via Air, and Next.js frontend with shared volume mounts and health check dependencies, while reusing the same `backend/Dockerfile` and `frontend/Dockerfile` for both development and production builds.
 - **Multi-Container Topology Diagram:**
 ```mermaid
 flowchart LR
@@ -313,14 +295,14 @@ flowchart LR
 - **Verification:**
   - [ ] `docker compose -f docker-compose.dev.yml ps` shows all 4 containers in `healthy` or `running` state.
 - **Dependencies:** Tasks 1.1, 1.2, 1.3
-- **Files touched:** `docker-compose.dev.yml`, `backend/Dockerfile.dev`, `frontend/Dockerfile.dev`, `.env.example`
+- **Files touched:** `docker-compose.dev.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `.env.example`
 - **Scope & Risk:** Small (4 files) | **Risk:** Low
 
 ---
 
 ### 🛑 Checkpoint 1: Foundation Ready
 - [ ] PostgreSQL and Redis up and healthy via Docker.
-- [ ] Goose migrations execute cleanly with seed data.
+- [ ] golang-migrate migrations execute cleanly with seed data.
 - [ ] Backend `/health` responds with 200 OK.
 - [ ] Frontend compiles and renders shell UI.
 
@@ -356,7 +338,7 @@ flowchart TD
 - **Verification:**
   - [ ] Unit tests pass: `go test -v ./internal/domain/... ./pkg/security/...`
 - **Dependencies:** Tasks 1.1, 1.2
-- **Files touched:** `backend/internal/domain/user.go`, `backend/pkg/security/password.go`, `backend/pkg/security/jwt.go`, `backend/internal/repository/postgres/user_repository.go`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** Low
 
 #### Task 2.2: Auth Delivery Handlers, RBAC Middleware & Router
@@ -384,7 +366,7 @@ flowchart TD
 - **Verification:**
   - [ ] Integration tests pass: `go test -v ./internal/delivery/http/...`
 - **Dependencies:** Task 2.1
-- **Files touched:** `backend/internal/usecase/auth_usecase.go`, `backend/internal/delivery/http/auth_handler.go`, `backend/internal/middleware/auth_middleware.go`, `backend/internal/delivery/http/router.go`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** Low
 
 #### Task 2.3: Frontend Auth Flow, Token Refresh Interceptor & Route Guards
@@ -428,7 +410,7 @@ sequenceDiagram
 - **Verification:**
   - [ ] Unit & hook tests pass: `pnpm test src/hooks/useAuth.test.ts`
 - **Dependencies:** Tasks 1.3, 2.2
-- **Files touched:** `frontend/src/app/(auth)/login/page.tsx`, `frontend/src/app/(auth)/register/page.tsx`, `frontend/src/hooks/useAuth.ts`, `frontend/src/lib/auth-storage.ts`, `frontend/src/components/auth/ProtectedRoute.tsx`
+
 - **Scope & Risk:** Medium (5 files) | **Risk:** Low
 
 ---
@@ -470,7 +452,7 @@ flowchart TD
 - **Verification:**
   - [ ] Unit test with mocked LLM responses: `go test -v ./internal/platform/llm/...`
 - **Dependencies:** Tasks 1.1, 2.1
-- **Files touched:** `backend/internal/domain/job_description.go`, `backend/internal/platform/llm/client.go`, `backend/internal/platform/llm/jd_parser.go`
+
 - **Scope & Risk:** Small (3 files) | **Risk:** Medium (Needs structured output prompt validation)
 
 #### Task 3.2: JD Repository, Usecase & REST Endpoints
@@ -496,7 +478,7 @@ stateDiagram-v2
 - **Verification:**
   - [ ] Integration tests pass: `go test -v ./internal/usecase/jd_usecase_test.go`
 - **Dependencies:** Tasks 3.1, 2.2
-- **Files touched:** `backend/internal/usecase/jd_usecase.go`, `backend/internal/repository/postgres/jd_repository.go`, `backend/internal/delivery/http/jd_handler.go`, `backend/internal/delivery/http/router.go`
+
 - **Scope & Risk:** Small (4 files) | **Risk:** Low
 
 #### Task 3.3: Frontend JD Upload, Skill Editor & Blueprint Preview UI
@@ -518,7 +500,7 @@ flowchart LR
 - **Verification:**
   - [ ] Component tests: `pnpm test src/app/(candidate)/jd/`
 - **Dependencies:** Tasks 1.3, 3.2
-- **Files touched:** `frontend/src/app/(candidate)/jd/upload/page.tsx`, `frontend/src/app/(candidate)/jd/[id]/edit/page.tsx`, `frontend/src/components/jd/SkillTagEditor.tsx`, `frontend/src/components/jd/BlueprintPreview.tsx`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** Low
 
 ---
@@ -562,7 +544,7 @@ flowchart TD
 - **Verification:**
   - [ ] Component render test: `pnpm test src/components/3d/AvatarCanvas.test.tsx`
 - **Dependencies:** Task 1.3
-- **Files touched:** `frontend/src/components/3d/AvatarCanvas.tsx`, `frontend/src/components/3d/AvatarModel.tsx`, `frontend/src/components/3d/SceneLighting.tsx`, `frontend/src/types/avatar.ts`, `frontend/public/models/interviewer_default.glb`
+
 - **Scope & Risk:** Medium (5 files) | **Risk:** Medium (3D asset management & memory disposal)
 
 #### Task 4.2: Blendshape Morph Target Lip-Sync Engine (`useAvatarLipSync`)
@@ -590,7 +572,7 @@ flowchart TD
 - **Verification:**
   - [ ] Hook unit test with synthetic viseme stream: `pnpm test src/hooks/useAvatarLipSync.test.ts`
 - **Dependencies:** Task 4.1
-- **Files touched:** `frontend/src/hooks/useAvatarLipSync.ts`, `frontend/src/types/avatar.ts`
+
 - **Scope & Risk:** Small (2 files) | **Risk:** Medium (Sync precision)
 
 #### Task 4.3: Web Audio API Microphone Streamer, VAD & Audio Visualizer
@@ -625,7 +607,7 @@ flowchart TD
 - **Verification:**
   - [ ] Component unit tests: `pnpm test src/components/audio/`
 - **Dependencies:** Task 1.3
-- **Files touched:** `frontend/src/hooks/useAudioRecorder.ts`, `frontend/src/components/audio/AudioVisualizer.tsx`, `frontend/src/components/audio/MicPermissionModal.tsx`
+
 - **Scope & Risk:** Small (3 files) | **Risk:** Medium (Browser audio permission edge cases)
 
 #### Task 4.4: Backend Speech-to-Text (STT) & Text-to-Speech (TTS + Visemes) Platform Adapters
@@ -655,7 +637,7 @@ flowchart LR
 - **Verification:**
   - [ ] Unit tests pass: `go test -v ./internal/platform/stt/... ./internal/platform/tts/...`
 - **Dependencies:** Task 1.1
-- **Files touched:** `backend/internal/platform/stt/stt_client.go`, `backend/internal/platform/tts/tts_client.go`, `backend/internal/platform/tts/viseme_mapper.go`
+
 - **Scope & Risk:** Medium (3 files) | **Risk:** Medium (Third-party speech latency)
 
 ---
@@ -695,7 +677,7 @@ stateDiagram-v2
 - **Verification:**
   - [ ] Integration tests pass: `go test -v ./internal/repository/postgres/session_repository_test.go`
 - **Dependencies:** Tasks 1.2, 2.1, 3.1
-- **Files touched:** `backend/internal/domain/interview_session.go`, `backend/internal/repository/postgres/session_repository.go`
+
 - **Scope & Risk:** Small (2 files) | **Risk:** Low
 
 #### Task 5.2: WebSocket Hub, Connection Manager & Reconnection Protocol
@@ -740,7 +722,7 @@ sequenceDiagram
 - **Verification:**
   - [ ] WebSocket harness test: `go test -v -race ./internal/delivery/ws/...`
 - **Dependencies:** Tasks 5.1, 2.1
-- **Files touched:** `backend/internal/delivery/ws/hub.go`, `backend/internal/delivery/ws/client.go`, `backend/internal/delivery/ws/interview_socket.go`, `backend/internal/delivery/http/router.go`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** High (Concurrent connection & state synchronization)
 
 #### Task 5.3: Adaptive Dialog Engine & AI Interview Orchestrator
@@ -776,7 +758,7 @@ flowchart TD
 - **Verification:**
   - [ ] Unit tests with mocked AI services: `go test -v ./internal/usecase/interview_orchestrator_test.go`
 - **Dependencies:** Tasks 5.2, 4.4, 3.1
-- **Files touched:** `backend/internal/usecase/interview_orchestrator.go`, `backend/internal/platform/llm/interview_dialog.go`
+
 - **Scope & Risk:** Medium (3 files) | **Risk:** High (Turnaround latency & AI prompt steering)
 
 #### Task 5.4: Frontend WebSocket Finite-State Client Hook (`useInterviewSocket`)
@@ -814,7 +796,7 @@ stateDiagram-v2
 - **Verification:**
   - [ ] Hook unit test with mocked WebSocket: `pnpm test src/hooks/useInterviewSocket.test.ts`
 - **Dependencies:** Tasks 5.2, 5.3, 4.2, 4.3
-- **Files touched:** `frontend/src/hooks/useInterviewSocket.ts`, `frontend/src/types/websocket.ts`
+
 - **Scope & Risk:** Medium (3 files) | **Risk:** High (Needs rigorous design pass for state transitions)
 
 #### Task 5.5: Build 3D Interview Room UI & HUD Integration
@@ -861,7 +843,7 @@ flowchart TD
   - [ ] Component & room integration tests: `pnpm test src/app/(candidate)/interview/`
   - [ ] Manual test: Complete a 3-question mock interview in browser with forced network disconnect test.
 - **Dependencies:** Tasks 5.4, 4.1, 4.3
-- **Files touched:** `frontend/src/app/(candidate)/interview/[id]/room/page.tsx`, `frontend/src/components/interview/InterviewHUD.tsx`, `frontend/src/components/interview/TranscriptStreamer.tsx`, `frontend/src/components/interview/ReconnectingModal.tsx`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** Medium
 
 ---
@@ -913,7 +895,7 @@ flowchart TD
 - **Verification:**
   - [ ] Unit tests pass: `go test -v ./internal/usecase/evaluation_usecase_test.go`
 - **Dependencies:** Tasks 5.1, 3.1
-- **Files touched:** `backend/internal/domain/evaluation.go`, `backend/internal/usecase/evaluation_usecase.go`, `backend/internal/platform/llm/evaluator.go`
+
 - **Scope & Risk:** Small (3 files) | **Risk:** Medium (LLM scoring consistency)
 
 #### Task 6.2: Evaluation Repository & REST Endpoints
@@ -939,7 +921,7 @@ flowchart TD
 - **Verification:**
   - [ ] Integration tests pass: `go test -v ./internal/delivery/http/interview_handler_test.go`
 - **Dependencies:** Task 6.1
-- **Files touched:** `backend/internal/repository/postgres/evaluation_repository.go`, `backend/internal/delivery/http/interview_handler.go`, `backend/internal/delivery/http/router.go`
+
 - **Scope & Risk:** Small (3 files) | **Risk:** Low
 
 #### Task 6.3: Frontend Evaluation Report & Radar Chart Dashboard
@@ -961,7 +943,7 @@ flowchart LR
 - **Verification:**
   - [ ] Component tests pass: `pnpm test src/app/(candidate)/report/`
 - **Dependencies:** Tasks 1.3, 6.2
-- **Files touched:** `frontend/src/app/(candidate)/report/[id]/page.tsx`, `frontend/src/app/(candidate)/history/page.tsx`, `frontend/src/components/report/DomainRadarChart.tsx`, `frontend/src/components/report/CompetencyCard.tsx`, `frontend/src/components/report/QuestionFeedbackList.tsx`
+
 - **Scope & Risk:** Medium (5 files) | **Risk:** Low
 
 ---
@@ -999,7 +981,7 @@ flowchart TD
 - **Verification:**
   - [ ] Integration tests pass: `go test -v ./internal/delivery/http/admin_handler_test.go`
 - **Dependencies:** Tasks 2.2, 5.1
-- **Files touched:** `backend/internal/usecase/admin_usecase.go`, `backend/internal/delivery/http/admin_handler.go`, `backend/internal/delivery/http/router.go`
+
 - **Scope & Risk:** Small (3 files) | **Risk:** Low
 
 #### Task 7.2: Platform Analytics & Skill Weakness Aggregator
@@ -1020,7 +1002,7 @@ flowchart LR
 - **Verification:**
   - [ ] Query performance test: `go test -v ./internal/repository/postgres/analytics_test.go`
 - **Dependencies:** Tasks 6.1, 7.1
-- **Files touched:** `backend/internal/repository/postgres/analytics_repository.go`, `backend/internal/delivery/http/admin_handler.go`
+
 - **Scope & Risk:** Small (2 files) | **Risk:** Low
 
 #### Task 7.3: Frontend Admin Dashboard & Analytics UI
@@ -1040,7 +1022,7 @@ flowchart TD
 - **Verification:**
   - [ ] Component tests pass: `pnpm test src/app/(admin)/`
 - **Dependencies:** Tasks 1.3, 7.2
-- **Files touched:** `frontend/src/app/(admin)/dashboard/page.tsx`, `frontend/src/app/(admin)/users/page.tsx`, `frontend/src/app/(admin)/sessions/page.tsx`, `frontend/src/components/admin/AdminSidebar.tsx`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** Low
 
 ---
@@ -1077,7 +1059,7 @@ flowchart TD
 - **Verification:**
   - [ ] `go test -v -race ./tests/integration/...`
 - **Dependencies:** Tasks 5.2, 7.2
-- **Files touched:** `backend/tests/integration/api_test.go`, `backend/tests/integration/ws_concurrency_test.go`, `backend/tests/integration/setup_test.go`
+
 - **Scope & Risk:** Small (3 files) | **Risk:** Medium
 
 #### Task 8.2: Playwright End-to-End Automated Test Suite & Fault Injection
@@ -1118,7 +1100,7 @@ sequenceDiagram
 - **Verification:**
   - [ ] `pnpm test:e2e`
 - **Dependencies:** Tasks 2.3, 3.3, 5.5, 6.3, 7.3
-- **Files touched:** `frontend/e2e/auth.spec.ts`, `frontend/e2e/interview-fsm.spec.ts`, `frontend/e2e/admin.spec.ts`, `frontend/playwright.config.ts`
+
 - **Scope & Risk:** Medium (4 files) | **Risk:** Medium
 
 #### Task 8.3: Multi-Stage Production Dockerfiles, Nginx Reverse Proxy & CI/CD Pipelines
@@ -1143,7 +1125,7 @@ flowchart TD
   - [ ] `docker compose -f docker-compose.prod.yml build`
   - [ ] CI pipeline dry-run passes.
 - **Dependencies:** All previous tasks
-- **Files touched:** `backend/Dockerfile`, `frontend/Dockerfile`, `nginx/nginx.conf`, `docker-compose.prod.yml`, `.github/workflows/ci.yml`
+
 - **Scope & Risk:** Medium (5 files) | **Risk:** Low
 
 ---
