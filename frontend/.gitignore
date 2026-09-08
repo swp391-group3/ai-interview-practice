@@ -8,3 +8,13 @@ test-results/
 *.tsbuildinfo
 .env*
 !.env.example
+
+# Design asset downloads, caches, archives, and intermediate work
+design/**/cache/
+design/**/downloads/
+design/**/tmp/
+design/**/__pycache__/
+design/**/assets/*.zip
+design/**/assets/**/*.zip
+design/**/assets/*.tar*
+design/**/assets/**/*.tar*
