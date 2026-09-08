@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"ai-interview-practice-api/pkg/apperror"
+	"github.com/swp391-group3/ai-interview-practice/pkg/apperror"
 )
 
 func GenerateToken(

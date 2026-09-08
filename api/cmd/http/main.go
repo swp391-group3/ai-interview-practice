@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"ai-interview-practice-api/internal/shared/config"
-	server "ai-interview-practice-api/internal/shared/transport/http"
-	"ai-interview-practice-api/pkg/util"
-
 	"github.com/caarlos0/env/v11"
+
+	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/config"
+	server "github.com/swp391-group3/ai-interview-practice/api/internal/shared/transport/http"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/util"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {

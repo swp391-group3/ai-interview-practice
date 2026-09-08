@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"ai-interview-practice-api/internal/auth/service"
-	"ai-interview-practice-api/internal/shared/config"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/auth/service"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/config"
 )
 
 type Server struct {

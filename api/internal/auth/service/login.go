@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"ai-interview-practice-api/internal/auth/repository"
-	"ai-interview-practice-api/pkg/apperror"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/auth/repository"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 )
 
 func (s *AuthServiceImpl) Login(ctx context.Context, email string, password string) (*TokenPair, error) {

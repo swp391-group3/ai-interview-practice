@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	auth "ai-interview-practice-api/internal/auth/transport/http"
-	"ai-interview-practice-api/internal/shared/config"
+	auth "github.com/swp391-group3/ai-interview-practice/api/internal/auth/transport/http"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/config"
 )
 
 func Build(

@@ -1,10 +1,11 @@
 package response
 
 import (
-	"ai-interview-practice-api/pkg/apperror"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/swp391-group3/ai-interview-practice/pkg/apperror"
 )
 
 type Envelope struct {

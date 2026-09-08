@@ -1,4 +1,4 @@
-module ai-interview-practice-api
+module github.com/swp391-group3/ai-interview-practice
 
 go 1.27.0
 

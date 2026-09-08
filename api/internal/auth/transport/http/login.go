@@ -3,8 +3,8 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 
-	"ai-interview-practice-api/pkg/apperror"
-	"ai-interview-practice-api/pkg/response"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/response"
 )
 
 type LoginRequest struct {
