@@ -95,10 +95,22 @@ CREATE TABLE IF NOT EXISTS job_description_skills (
     UNIQUE (job_description_id, skill_id)
 );
 
+CREATE TABLE IF NOT EXISTS avatar_profiles (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name text NOT NULL,
+    model_url text NOT NULL,
+    voice_id text NOT NULL,
+    default_camera jsonb,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS interview_sessions (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     jd_id uuid REFERENCES job_descriptions(id) ON DELETE SET NULL,
+    avatar_id uuid REFERENCES avatar_profiles(id) ON DELETE SET NULL,
     status interview_status NOT NULL DEFAULT 'created'::interview_status,
     difficulty interview_difficulty NOT NULL,
     total_questions integer NOT NULL DEFAULT 0,
@@ -149,4 +161,5 @@ CREATE INDEX IF NOT EXISTS idx_job_description_skills_jd_id ON job_description_s
 CREATE INDEX IF NOT EXISTS idx_job_description_skills_skill_id ON job_description_skills(skill_id);
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_user_id ON interview_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_jd_id ON interview_sessions(jd_id);
+CREATE INDEX IF NOT EXISTS idx_interview_sessions_avatar_id ON interview_sessions(avatar_id);
 CREATE INDEX IF NOT EXISTS idx_session_turns_session_id ON session_turns(session_id);

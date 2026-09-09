@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS performance_reports;
 DROP TABLE IF EXISTS session_turns;
 DROP TABLE IF EXISTS interview_sessions;
+DROP TABLE IF EXISTS avatar_profiles;
 DROP TABLE IF EXISTS job_description_skills;
 DROP TABLE IF EXISTS job_descriptions;
 DROP TABLE IF EXISTS skills;
