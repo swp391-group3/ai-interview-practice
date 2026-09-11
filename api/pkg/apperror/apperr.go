@@ -17,25 +17,29 @@ type AppError struct {
 	Err     error
 }
 
-func New(code Code, message string) AppError {
-	return AppError{
+func New(code Code, message string) *AppError {
+	return &AppError{
 		Code:    code,
 		Message: message,
 	}
 }
 
-func Wrap(code Code, message string, err error) AppError {
-	return AppError{
+func Wrap(code Code, message string, err error) *AppError {
+	return &AppError{
 		Code:    code,
 		Message: message,
 		Err:     err,
 	}
 }
 
-func (e AppError) Error() string {
+func (e *AppError) Error() string {
 	if e.Err != nil {
 		return e.Err.Error()
 	}
 
 	return e.Message
+}
+
+func (e *AppError) Unwrap() error {
+	return e.Err
 }

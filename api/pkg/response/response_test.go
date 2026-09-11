@@ -1,0 +1,74 @@
+package response_test
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
+	"github.com/swp391-group3/ai-interview-practice/api/pkg/response"
+)
+
+func TestError(t *testing.T) {
+	cause := errors.New("private password/database details")
+	for _, tc := range []struct {
+		name   string
+		code   apperror.Code
+		status int
+	}{
+		{"credentials", apperror.CodeInvalidCredentials, http.StatusUnauthorized},
+		{"account missing", apperror.CodeAccountNotFound, http.StatusNotFound},
+		{"account locked", apperror.CodeAccountLocked, http.StatusForbidden},
+		{"token", apperror.CodeInvalidToken, http.StatusUnauthorized},
+		{"validation", apperror.CodeValidation, http.StatusBadRequest},
+		{"internal", apperror.CodeInternal, http.StatusInternalServerError},
+		{"unknown code", apperror.Code("FUTURE_CODE"), http.StatusInternalServerError},
+	} {
+		for _, wrapped := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/wrapped=%t", tc.name, wrapped), func(t *testing.T) {
+				var err error = apperror.Wrap(tc.code, "public message", cause)
+				if wrapped {
+					err = fmt.Errorf("private service context: %w", err)
+				}
+				assertResponse(t, err, tc.status, tc.code, "public message")
+			})
+		}
+	}
+	for name, err := range map[string]error{
+		"plain cause": cause,
+		"nil":         nil,
+		"typed nil":   (*apperror.AppError)(nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			assertResponse(t, err, http.StatusInternalServerError, apperror.CodeInternal, "something wrong happen")
+		})
+	}
+	t.Run("constructor without cause", func(t *testing.T) {
+		assertResponse(t, apperror.New(apperror.CodeValidation, "invalid input"), http.StatusBadRequest, apperror.CodeValidation, "invalid input")
+	})
+}
+
+func assertResponse(t *testing.T, err error, status int, code apperror.Code, message string) {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	response.Error(ctx, err)
+	if recorder.Code != status {
+		t.Fatalf("status = %d, want %d; body = %s", recorder.Code, status, recorder.Body.String())
+	}
+	var body response.Envelope
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if body.Success || body.Data != nil || body.Error == nil || body.Error.Code != code || body.Error.Message != message {
+		t.Fatalf("unexpected envelope: %+v; body = %s", body, recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "private") || strings.Contains(recorder.Body.String(), "database") {
+		t.Fatalf("internal cause leaked: %s", recorder.Body.String())
+	}
+}
