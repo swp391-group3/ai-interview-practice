@@ -1,0 +1,7 @@
+# Local environment
+/.env
+/.env.local
+/.env.*.local
+
+# Keep environment template tracked
+!/.env.example
