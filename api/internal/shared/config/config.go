@@ -3,8 +3,8 @@ package config
 import "time"
 
 type Config struct {
-	LLMProvider   string        `env:"LLM_PROVIDER" envDefault:"opencode_zen"`
-	LLMBaseURL    string        `env:"LLM_BASE_URL" envDefault:"https://opencode.ai/zen/v1"`
+	LLMProvider   string        `env:"LLM_PROVIDER" envDefault:"openai_compatible"`
+	LLMBaseURL    string        `env:"LLM_BASE_URL" envDefault:"https://generativelanguage.googleapis.com/v1beta/openai"`
 	LLMAPIKey     string        `env:"LLM_API_KEY"`
 	LLMModel      string        `env:"LLM_MODEL"`
 	LLMTimeout    time.Duration `env:"LLM_TIMEOUT" envDefault:"30s"`

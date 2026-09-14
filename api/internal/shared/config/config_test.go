@@ -12,7 +12,12 @@ func TestLLMEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.LLMProvider != "opencode_zen" || cfg.LLMBaseURL != "https://opencode.ai/zen/v1" || cfg.LLMModel != "" || cfg.LLMAPIKey != "" || cfg.LLMTimeout != 30*time.Second || cfg.LLMMaxRetries != 1 {
+	if cfg.LLMProvider != "openai_compatible" ||
+		cfg.LLMBaseURL != "https://generativelanguage.googleapis.com/v1beta/openai" ||
+		cfg.LLMModel != "" ||
+		cfg.LLMAPIKey != "" ||
+		cfg.LLMTimeout != 30*time.Second ||
+		cfg.LLMMaxRetries != 1 {
 		t.Fatal("unexpected LLM defaults")
 	}
 	cfg, err = env.ParseAsWithOptions[Config](env.Options{Environment: map[string]string{
