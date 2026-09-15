@@ -5,12 +5,17 @@ import "fmt"
 type Code string
 
 const (
-	CodeInvalidCredentials Code = "INVALID_CREDENTIALS"
-	CodeAccountNotFound    Code = "USER_NOT_FOUND"
-	CodeAccountLocked      Code = "USER_INACTIVE"
-	CodeInvalidToken       Code = "INVALID_TOKEN"
-	CodeValidation         Code = "VALIDATION_ERROR"
-	CodeInternal           Code = "INTERNAL_ERROR"
+	CodeInvalidCredentials      Code = "INVALID_CREDENTIALS"
+	CodeAccountNotFound         Code = "USER_NOT_FOUND"
+	CodeAccountLocked           Code = "USER_INACTIVE"
+	CodeInvalidToken            Code = "INVALID_TOKEN"
+	CodeValidation              Code = "VALIDATION_ERROR"
+	CodeInternal                Code = "INTERNAL_ERROR"
+	CodeInvalidJDInput          Code = "INVALID_JD_INPUT"
+	CodeJDTooShort              Code = "JD_TOO_SHORT"
+	CodeJDTooLong               Code = "JD_TOO_LONG"
+	CodeExtractionFailed        Code = "EXTRACTION_FAILED"
+	CodeInvalidExtractionOutput Code = "INVALID_EXTRACTION_OUTPUT"
 )
 
 type AppError struct {
