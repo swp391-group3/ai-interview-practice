@@ -13,8 +13,8 @@ type Config struct {
 	CorsOrigin  string `env:"CORS_ORIGIN" envDefault:"*"`
 	DatabaseURL string `env:"DATABASE_URL"`
 
-	JWTRefreshSecret string `env:"JWT_REFRESH_SECRET" envDefault:"secret"`
+	JWTRefreshSecret string `env:"JWT_REFRESH_SECRET" envDefault:"refresh-secret"`
 	JWTRefreshExpiry int    `env:"JWT_REFRESH_EXPIRY" envDefault:"86400"`
-	JWTAccessSecret  string `env:"JWT_ACCESS_SECRET" envDefault:"secret"`
+	JWTAccessSecret  string `env:"JWT_ACCESS_SECRET" envDefault:"access-secret"`
 	JWTAccessExpiry  int    `env:"JWT_ACCESS_EXPIRY" envDefault:"600"`
 }
