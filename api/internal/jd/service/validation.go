@@ -15,13 +15,12 @@ const (
 
 	invalidJDInputMessage          = "Job description input is invalid."
 	jdTooShortMessage              = "Job description must contain at least 100 Unicode characters."
+	jdTooLongMessage               = "Job description must contain at most 20000 Unicode characters."
 	invalidExtractionOutputMessage = "Extraction did not produce a usable job description."
 )
 
-// NormalizeInput counts Unicode code points after normalization, not bytes or
-// grapheme clusters. Invalid UTF-8, empty input and over-limit input are rejected.
-// CRLF/CR become LF, horizontal whitespace collapses within lines, and blank
-// line runs collapse to one blank line. Meaningful line boundaries are retained.
+// NormalizeInput validates UTF-8, normalizes line endings/whitespace,
+// and enforces the JD character-count range.
 func NormalizeInput(raw string) (string, error) {
 	if !utf8.ValidString(raw) {
 		return "", apperror.Wrap(apperror.CodeInvalidJDInput, invalidJDInputMessage, fmt.Errorf("input is not valid UTF-8"))
@@ -44,7 +43,7 @@ func NormalizeInput(raw string) (string, error) {
 		return "", apperror.Wrap(apperror.CodeJDTooShort, jdTooShortMessage, fmt.Errorf("normalized length %d", length))
 	}
 	if length > MaxJDLength {
-		return "", apperror.Wrap(apperror.CodeInvalidJDInput, invalidJDInputMessage, fmt.Errorf("normalized length %d exceeds %d", length, MaxJDLength))
+		return "", apperror.Wrap(apperror.CodeJDTooLong, jdTooLongMessage, fmt.Errorf("normalized length %d exceeds %d", length, MaxJDLength))
 	}
 	return normalized, nil
 }

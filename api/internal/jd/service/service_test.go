@@ -52,7 +52,7 @@ func TestInputPolicy(t *testing.T) {
 		{"short unicode", strings.Repeat("界", 99), apperror.CodeJDTooShort, 0},
 		{"minimum unicode", strings.Repeat("界", 100), "", 100},
 		{"maximum unicode", strings.Repeat("界", MaxJDLength), "", MaxJDLength},
-		{"over maximum", strings.Repeat("界", MaxJDLength+1), apperror.CodeInvalidJDInput, 0},
+		{"over maximum", strings.Repeat("界", MaxJDLength+1), apperror.CodeJDTooLong, 0},
 		{"length after normalization", strings.Repeat(" ", MaxJDLength) + strings.Repeat("界", 100), "", 100},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -151,11 +151,6 @@ func TestCandidateValidation(t *testing.T) {
 	}
 }
 
-type transientError struct{}
-
-func (transientError) Error() string   { return "transient" }
-func (transientError) Retryable() bool { return true }
-
 func TestRetryBudgetAndCauses(t *testing.T) {
 	secretCause := errors.New("internal provider detail")
 	for _, tt := range []struct {
@@ -166,10 +161,9 @@ func TestRetryBudgetAndCauses(t *testing.T) {
 		code           apperror.Code
 	}{
 		{"permanent provider failure", secretCause, false, 1, 1, apperror.CodeExtractionFailed},
-		{"transient recovery", transientError{}, false, 1, 2, ""},
 		{"malformed recovery", apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, secretCause), false, 1, 2, ""},
 		{"invalid candidate recovery", nil, true, 1, 2, ""},
-		{"retries disabled", transientError{}, false, 0, 1, apperror.CodeExtractionFailed},
+		{"retries disabled", apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, secretCause), false, 0, 1, apperror.CodeInvalidExtractionOutput},
 		{"canceled", context.Canceled, false, 1, 1, apperror.CodeExtractionFailed},
 		{"deadline", context.DeadlineExceeded, false, 1, 1, apperror.CodeExtractionFailed},
 	} {
@@ -201,7 +195,7 @@ func TestRetryBudgetAndCauses(t *testing.T) {
 	f := &fakeExtractor{}
 	f.fn = func(context.Context, string) (ExtractionCandidate, error) {
 		if f.calls == 1 {
-			return ExtractionCandidate{}, transientError{}
+			return ExtractionCandidate{}, apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, secretCause)
 		}
 		return ExtractionCandidate{}, nil
 	}

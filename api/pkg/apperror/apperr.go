@@ -13,6 +13,7 @@ const (
 	CodeInternal                Code = "INTERNAL_ERROR"
 	CodeInvalidJDInput          Code = "INVALID_JD_INPUT"
 	CodeJDTooShort              Code = "JD_TOO_SHORT"
+	CodeJDTooLong               Code = "JD_TOO_LONG"
 	CodeExtractionFailed        Code = "EXTRACTION_FAILED"
 	CodeInvalidExtractionOutput Code = "INVALID_EXTRACTION_OUTPUT"
 )

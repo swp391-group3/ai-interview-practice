@@ -5,7 +5,6 @@ package provider
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/caarlos0/env/v11"
 
 	"github.com/swp391-group3/ai-interview-practice/api/internal/jd/service"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/ai"
 	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/config"
 )
 
@@ -23,12 +23,13 @@ func TestLLMSmoke(t *testing.T) {
 	if err != nil {
 		t.Fatal("invalid environment configuration; check LLM_TIMEOUT and LLM_MAX_RETRIES")
 	}
-	if cfg.LLMProvider != "openai_compatible" {
-		t.Fatal("smoke test requires LLM_PROVIDER=openai_compatible")
-	}
-	adapter, err := New(Config{BaseURL: cfg.LLMBaseURL, APIKey: cfg.LLMAPIKey, Model: cfg.LLMModel, Timeout: cfg.LLMTimeout})
+	chatModel, err := ai.NewChatModel(context.Background(), cfg)
 	if err != nil {
-		t.Fatal("invalid LLM adapter configuration; check base URL, API key, model and timeout")
+		t.Fatal("invalid Gemini configuration; check provider, API key, model and timeout")
+	}
+	adapter, err := New(chatModel)
+	if err != nil {
+		t.Fatal("invalid JD adapter configuration")
 	}
 	s, err := service.New(adapter, cfg.LLMMaxRetries)
 	if err != nil {
@@ -43,17 +44,7 @@ Knowledge of payment processing and financial transaction systems is required to
 build reliable backend services for high-volume financial workflows.`
 	got, err := s.Extract(ctx, jd)
 	if err != nil {
-		var providerErr *HTTPError
-		if errors.As(err, &providerErr) {
-			// The body is preserved so account/billing/model failures can be
-			// reported accurately. Remove any echoed key before displaying it.
-			body := strings.ReplaceAll(providerErr.Body, cfg.LLMAPIKey, "[REDACTED]")
-			if encoded, marshalErr := json.Marshal(cfg.LLMAPIKey); marshalErr == nil {
-				body = strings.ReplaceAll(body, string(encoded[1:len(encoded)-1]), "[REDACTED]")
-			}
-			t.Fatalf("LLM provider returned HTTP %d; provider response: %s", providerErr.StatusCode, body)
-		}
-		t.Fatalf("LLM extraction failed: %v", err)
+		t.Fatal("Gemini extraction failed; provider details omitted to protect credentials")
 	}
 	body, err := json.MarshalIndent(got, "", "  ")
 	if err != nil {
