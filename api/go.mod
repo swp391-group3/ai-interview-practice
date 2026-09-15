@@ -6,7 +6,6 @@ require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/cloudwego/eino v0.9.19
 	github.com/cloudwego/eino-ext/components/model/gemini v0.1.36
-	github.com/eino-contrib/jsonschema v1.0.3
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -27,6 +26,7 @@ require (
 	github.com/bytedance/sonic/loader v0.5.2 // indirect
 	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/eino-contrib/jsonschema v1.0.3 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
