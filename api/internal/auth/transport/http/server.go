@@ -23,5 +23,5 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *Server {
 func (s *Server) RegisterRoutes(r *gin.Engine) {
 	auth := r.Group("/auth")
 
-	auth.POST("/auth/login", s.Login)
+	auth.POST("/login", s.Login)
 }
