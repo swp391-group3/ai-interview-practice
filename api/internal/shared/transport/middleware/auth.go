@@ -23,7 +23,7 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 			cfg.JWTAccessSecret == cfg.JWTRefreshSecret {
 			response.Error(c, apperror.New(
 				apperror.CodeInternal,
-				"authentication is not configured correctly",
+				"Something went wrong",
 			))
 			c.Abort()
 			return
