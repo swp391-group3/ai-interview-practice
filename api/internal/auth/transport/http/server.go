@@ -8,6 +8,8 @@ import (
 	"github.com/swp391-group3/ai-interview-practice/api/internal/shared/config"
 )
 
+const refreshTokenCookie = "refresh"
+
 type Server struct {
 	cfg *config.Config
 	svc service.AuthService

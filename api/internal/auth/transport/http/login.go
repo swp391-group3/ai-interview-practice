@@ -1,11 +1,15 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/response"
 )
+
+const refreshPath = "/auth/refresh"
 
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email" example:"jane@example.com"`
@@ -24,6 +28,11 @@ func (s *Server) Login(c *gin.Context) {
 		response.Error(c, err)
 		return
 	}
+	c.SetCookieData(&http.Cookie{
+		Name:  refreshTokenCookie,
+		Value: tokenPair.RefreshToken,
+		Path:  refreshPath,
+	})
 
-	response.OK(c, tokenPair)
+	response.OK(c, tokenPair.AccessToken)
 }
