@@ -2,6 +2,7 @@ package tracer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -41,6 +42,10 @@ func New(cfg Config) (*Tracer, error) {
 		}, nil
 	}
 
+	if cfg.SampleRate < 0.0 || cfg.SampleRate > 1.0 {
+		return nil, fmt.Errorf("tracer sample_rate must be between 0.0 and 1.0, got %f", cfg.SampleRate)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -69,10 +74,12 @@ func New(cfg Config) (*Tracer, error) {
 		return nil, err
 	}
 
+	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(cfg.SampleRate))
+
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSampler(sampler),
 	)
 
 	otel.SetTracerProvider(provider)

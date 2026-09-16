@@ -44,12 +44,9 @@ func (r *Router) Setup() *gin.Engine {
 
 	router.GET("/health", r.healthHandler.Health)
 
-	v1 := router.Group("/api/v1")
+	auth := router.Group("/auth")
 	{
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/login", r.authHandler.Login)
-		}
+		auth.POST("/login", r.authHandler.Login)
 	}
 
 	return router

@@ -31,7 +31,7 @@ func ProvideTracer(cfg *config.Config) (*tracer.Tracer, error) {
 }
 
 func ProvideDatabasePool(cfg *config.Config, log *logger.Logger) (*pgxpool.Pool, error) {
-	pool, err := database.NewDatabasePool(cfg.Database.DSN())
+	pool, err := database.NewDatabasePool(&cfg.Database)
 	if err != nil {
 		log.Error("Failed to connect to database", logger.Error(err))
 		return nil, err

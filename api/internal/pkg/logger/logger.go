@@ -31,6 +31,11 @@ const (
 func New(cfg Config) (*Logger, error) {
 	level := parseLevel(cfg.Level)
 
+	timeEncoder := zapcore.ISO8601TimeEncoder
+	if cfg.TimeFormat != "" {
+		timeEncoder = zapcore.TimeEncoderOfLayout(cfg.TimeFormat)
+	}
+
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "timestamp",
 		LevelKey:       "level",
@@ -41,7 +46,7 @@ func New(cfg Config) (*Logger, error) {
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeTime:     timeEncoder,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}

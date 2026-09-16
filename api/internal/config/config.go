@@ -1,7 +1,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"net"
+	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,15 +54,46 @@ type DatabaseConfig struct {
 	DebugLevel      string        `mapstructure:"debug_level"`
 }
 
-// DSN trả về connection string kết nối Postgres
+// DSN returns the PostgreSQL connection string.
+// If URL is set, it is returned directly.
+// Otherwise, a postgres:// connection URL is constructed with all
+// credentials and parameters properly escaped.
 func (d *DatabaseConfig) DSN() string {
 	if d.URL != "" {
 		return d.URL
 	}
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		d.Host, d.Port, d.User, d.Password, d.Name, d.SSLMode,
-	)
+
+	u := &url.URL{
+		Scheme: "postgres",
+	}
+
+	host := d.Host
+	if host == "" {
+		host = "localhost"
+	}
+	port := d.Port
+	if port <= 0 {
+		port = 5432
+	}
+	u.Host = net.JoinHostPort(host, strconv.Itoa(port))
+
+	if d.Name != "" {
+		u.Path = "/" + strings.TrimPrefix(d.Name, "/")
+	}
+
+	if d.User != "" || d.Password != "" {
+		u.User = url.UserPassword(d.User, d.Password)
+	}
+
+	q := make(url.Values)
+	if d.SSLMode != "" {
+		q.Set("sslmode", d.SSLMode)
+	}
+	if len(q) > 0 {
+		u.RawQuery = q.Encode()
+	}
+
+	return u.String()
 }
 
 type JWTConfig struct {
@@ -128,9 +164,41 @@ func Load(configPath string) (*Config, error) {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
+	// Explicitly bind environment variables including common un-prefixed aliases
+	_ = v.BindEnv("jwt.access_secret", "APP_JWT_ACCESS_SECRET", "JWT_ACCESS_SECRET")
+	_ = v.BindEnv("jwt.refresh_secret", "APP_JWT_REFRESH_SECRET", "JWT_REFRESH_SECRET")
+	_ = v.BindEnv("llm.api_key", "APP_LLM_API_KEY", "LLM_API_KEY")
+
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Resolve environment values in Go if not picked up by viper unmarshal
+	if cfg.JWT.AccessSecret == "" {
+		if val := os.Getenv("APP_JWT_ACCESS_SECRET"); val != "" {
+			cfg.JWT.AccessSecret = val
+		} else if val := os.Getenv("JWT_ACCESS_SECRET"); val != "" {
+			cfg.JWT.AccessSecret = val
+		}
+	}
+	if cfg.JWT.RefreshSecret == "" {
+		if val := os.Getenv("APP_JWT_REFRESH_SECRET"); val != "" {
+			cfg.JWT.RefreshSecret = val
+		} else if val := os.Getenv("JWT_REFRESH_SECRET"); val != "" {
+			cfg.JWT.RefreshSecret = val
+		}
+	}
+	if cfg.LLM.APIKey == "" {
+		if val := os.Getenv("APP_LLM_API_KEY"); val != "" {
+			cfg.LLM.APIKey = val
+		} else if val := os.Getenv("LLM_API_KEY"); val != "" {
+			cfg.LLM.APIKey = val
+		}
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	return &cfg, nil
@@ -161,9 +229,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.max_idle_conns", 10)
 	v.SetDefault("database.conn_max_lifetime", "5m")
 
-	// JWT defaults
-	v.SetDefault("jwt.access_secret", "access-secret")
-	v.SetDefault("jwt.refresh_secret", "refresh-secret")
+	// JWT defaults (no default secrets in base viper config)
 	v.SetDefault("jwt.access_token_expiry", "600s")
 	v.SetDefault("jwt.refresh_token_expiry", "86400s")
 	v.SetDefault("jwt.reset_token_expiry", "1h")
@@ -196,6 +262,52 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("llm.model", "gemini-1.5-flash")
 	v.SetDefault("llm.timeout", "30s")
 	v.SetDefault("llm.max_retries", 1)
+}
+
+// Validate checks configuration integrity and security constraints.
+func (c *Config) Validate() error {
+	if c.IsProduction() {
+		if c.JWT.AccessSecret == "" {
+			return errors.New("jwt.access_secret is required in production")
+		}
+		if c.JWT.RefreshSecret == "" {
+			return errors.New("jwt.refresh_secret is required in production")
+		}
+		if c.JWT.AccessSecret == c.JWT.RefreshSecret {
+			return errors.New("jwt.access_secret and jwt.refresh_secret must be distinct")
+		}
+
+		knownInsecure := map[string]bool{
+			"access-secret":      true,
+			"refresh-secret":     true,
+			"secret":             true,
+			"dev-access-secret":  true,
+			"dev-refresh-secret": true,
+			"change-me":          true,
+		}
+		if knownInsecure[c.JWT.AccessSecret] || knownInsecure[c.JWT.RefreshSecret] {
+			return errors.New("jwt secrets must not use default or placeholder values in production")
+		}
+	} else {
+		// Keep isolated defaults for development and testing environments only
+		if c.JWT.AccessSecret == "" {
+			c.JWT.AccessSecret = "dev-access-secret"
+		}
+		if c.JWT.RefreshSecret == "" {
+			c.JWT.RefreshSecret = "dev-refresh-secret"
+		}
+		if c.JWT.AccessSecret == c.JWT.RefreshSecret {
+			return errors.New("jwt.access_secret and jwt.refresh_secret must be distinct")
+		}
+	}
+
+	if c.Tracer.Enabled {
+		if c.Tracer.SampleRate < 0.0 || c.Tracer.SampleRate > 1.0 {
+			return fmt.Errorf("tracer.sample_rate must be between 0.0 and 1.0, got %f", c.Tracer.SampleRate)
+		}
+	}
+
+	return nil
 }
 
 func (c *Config) IsDevelopment() bool {
