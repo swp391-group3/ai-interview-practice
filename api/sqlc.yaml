@@ -1,12 +1,12 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "internal/auth/repository/query/"
+    queries: "internal/features/auth/repository/query/"
     schema: "migration/"
     gen:
       go:
         package: "repository"
-        out: "internal/auth/repository"
+        out: "internal/features/auth/repository"
         sql_package: "pgx/v5"
         emit_pointers_for_null_types: true
         overrides:

@@ -1,0 +1,75 @@
+app:
+  name: ai-interview-practice
+  environment: development
+  version: 1.0.0
+  debug: true
+
+server:
+  host: 0.0.0.0
+  port: 3000
+  read_timeout: 10s
+  write_timeout: 30s
+  shutdown_timeout: 5s
+
+database:
+  url: postgresql://postgres:postgres@localhost:5432/interview_practice?sslmode=disable
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  name: interview_practice
+  ssl_mode: disable
+  max_open_conns: 25
+  max_idle_conns: 10
+  conn_max_lifetime: 5m
+  debug_level: info
+
+jwt:
+  access_secret: ""
+  refresh_secret: ""
+  access_token_expiry: 600s     # 10 minutes
+  refresh_token_expiry: 86400s  # 24 hours
+  reset_token_expiry: 1h
+  verify_token_expiry: 24h
+  issuer: ai-interview-practice
+
+cors:
+  allow_origins:
+    - "*"
+  allow_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+    - PATCH
+  allow_headers:
+    - Origin
+    - Content-Type
+    - Accept
+    - Authorization
+    - X-Request-ID
+  expose_headers:
+    - X-Request-ID
+  allow_credentials: true
+  max_age: 86400
+
+logger:
+  level: debug
+  format: console  # json or console
+  output: stdout
+  time_format: "2006-01-02T15:04:05.000Z07:00"
+
+tracer:
+  enabled: false
+  service_name: ai-interview-practice-api
+  endpoint: localhost:4317
+  insecure: true
+  sample_rate: 1.0
+
+llm:
+  provider: gemini
+  api_key: ""
+  model: gemini-1.5-flash
+  timeout: 30s
+  max_retries: 1
