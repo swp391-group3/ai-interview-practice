@@ -7,7 +7,7 @@ import (
 	"github.com/swp391-group3/ai-interview-practice/api/internal/pkg/logger"
 )
 
-// LoggingMiddleware tự động ghi log request bằng Zap logger
+// LoggingMiddleware automatically logs requests using the Zap logger
 func LoggingMiddleware(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()

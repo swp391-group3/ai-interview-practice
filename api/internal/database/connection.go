@@ -10,7 +10,7 @@ import (
 	"github.com/swp391-group3/ai-interview-practice/api/internal/config"
 )
 
-// NewDatabasePool khởi tạo pgxpool.Pool từ DatabaseConfig
+// NewDatabasePool initializes pgxpool.Pool from DatabaseConfig
 func NewDatabasePool(cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
 	pgxConfig, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
@@ -61,7 +61,7 @@ func NewDatabasePool(cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// NewDatabasePoolWithDSN khởi tạo pgxpool.Pool từ raw connection string
+// NewDatabasePoolWithDSN initializes pgxpool.Pool from a raw connection string
 func NewDatabasePoolWithDSN(connStr string) (*pgxpool.Pool, error) {
 	pgxConfig, err := pgxpool.ParseConfig(connStr)
 	if err != nil {

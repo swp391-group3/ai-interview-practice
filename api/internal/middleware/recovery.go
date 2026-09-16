@@ -7,7 +7,7 @@ import (
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/response"
 )
 
-// RecoveryMiddleware bắt các panic trong quá trình xử lý request và log stack trace
+// RecoveryMiddleware recovers from panics during request processing and logs the stack trace
 func RecoveryMiddleware(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {

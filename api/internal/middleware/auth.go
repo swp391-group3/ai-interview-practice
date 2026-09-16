@@ -14,7 +14,7 @@ import (
 
 const currentUserIDKey = "auth.middleware.currentUserID"
 
-// RequireAuth xác thực request sử dụng JWT Access Token
+// RequireAuth authenticates requests using a JWT Access Token
 func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if cfg == nil ||
@@ -46,7 +46,7 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
-// CurrentUserID lấy UUID của tài khoản đã đăng nhập từ context
+// CurrentUserID retrieves the UUID of the authenticated user from the context
 func CurrentUserID(c *gin.Context) (uuid.UUID, bool) {
 	if c == nil {
 		return uuid.Nil, false

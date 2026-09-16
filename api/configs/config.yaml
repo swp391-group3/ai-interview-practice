@@ -27,8 +27,8 @@ database:
 jwt:
   access_secret: ""
   refresh_secret: ""
-  access_token_expiry: 600s     # 10 phút
-  refresh_token_expiry: 86400s  # 24 giờ
+  access_token_expiry: 600s     # 10 minutes
+  refresh_token_expiry: 86400s  # 24 hours
   reset_token_expiry: 1h
   verify_token_expiry: 24h
   issuer: ai-interview-practice
@@ -56,7 +56,7 @@ cors:
 
 logger:
   level: debug
-  format: console  # json hoặc console
+  format: console  # json or console
   output: stdout
   time_format: "2006-01-02T15:04:05.000Z07:00"
 

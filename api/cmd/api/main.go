@@ -29,7 +29,7 @@ func main() {
 		logger.String("version", app.Config.App.Version),
 	)
 
-	// Dọn dẹp tài nguyên khi tắt ứng dụng
+	// Clean up resources when application shuts down
 	defer func() {
 		if app.Pool != nil {
 			app.Logger.Info("Closing database connection pool...")
@@ -41,14 +41,14 @@ func main() {
 		_ = app.Logger.Sync()
 	}()
 
-	// Chạy HTTP Server trong goroutine
+	// Run HTTP server in a goroutine
 	go func() {
 		if err := app.Server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			app.Logger.Fatal("HTTP server failed to start", logger.Error(err))
 		}
 	}()
 
-	// Chờ tín hiệu dừng
+	// Wait for termination signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

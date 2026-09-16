@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config chứa toàn bộ cấu hình hệ thống
+// Config holds the entire system configuration
 type Config struct {
 	App      AppConfig      `mapstructure:"app"`
 	Server   ServerConfig   `mapstructure:"server"`
@@ -117,8 +117,8 @@ type CORSConfig struct {
 
 type LoggerConfig struct {
 	Level      string `mapstructure:"level"`  // debug, info, warn, error
-	Format     string `mapstructure:"format"` // json hoặc console
-	Output     string `mapstructure:"output"` // stdout hoặc file path
+	Format     string `mapstructure:"format"` // json or console
+	Output     string `mapstructure:"output"` // stdout or file path
 	TimeFormat string `mapstructure:"time_format"`
 }
 
@@ -138,7 +138,7 @@ type LLMConfig struct {
 	MaxRetries int           `mapstructure:"max_retries"`
 }
 
-// Load nạp cấu hình từ file và ghi đè bằng biến môi trường
+// Load loads configuration from file and overrides with environment variables
 func Load(configPath string) (*Config, error) {
 	v := viper.New()
 

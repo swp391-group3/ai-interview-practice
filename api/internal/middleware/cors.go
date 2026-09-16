@@ -9,7 +9,7 @@ import (
 	"github.com/swp391-group3/ai-interview-practice/api/internal/config"
 )
 
-// CORSMiddleware xử lý CORS động từ cấu hình config.CORSConfig
+// CORSMiddleware dynamically handles CORS based on config.CORSConfig
 func CORSMiddleware(cfg config.CORSConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
