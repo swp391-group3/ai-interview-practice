@@ -160,14 +160,13 @@ func Load(configPath string) (*Config, error) {
 		}
 	}
 
-	v.SetEnvPrefix("APP")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// Explicitly bind environment variables including common un-prefixed aliases
-	_ = v.BindEnv("jwt.access_secret", "APP_JWT_ACCESS_SECRET", "JWT_ACCESS_SECRET")
-	_ = v.BindEnv("jwt.refresh_secret", "APP_JWT_REFRESH_SECRET", "JWT_REFRESH_SECRET")
-	_ = v.BindEnv("llm.api_key", "APP_LLM_API_KEY", "LLM_API_KEY")
+	// Explicitly bind environment variables
+	_ = v.BindEnv("jwt.access_secret", "JWT_ACCESS_SECRET")
+	_ = v.BindEnv("jwt.refresh_secret", "JWT_REFRESH_SECRET")
+	_ = v.BindEnv("llm.api_key", "LLM_API_KEY")
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
@@ -176,23 +175,17 @@ func Load(configPath string) (*Config, error) {
 
 	// Resolve environment values in Go if not picked up by viper unmarshal
 	if cfg.JWT.AccessSecret == "" {
-		if val := os.Getenv("APP_JWT_ACCESS_SECRET"); val != "" {
-			cfg.JWT.AccessSecret = val
-		} else if val := os.Getenv("JWT_ACCESS_SECRET"); val != "" {
+		if val := os.Getenv("JWT_ACCESS_SECRET"); val != "" {
 			cfg.JWT.AccessSecret = val
 		}
 	}
 	if cfg.JWT.RefreshSecret == "" {
-		if val := os.Getenv("APP_JWT_REFRESH_SECRET"); val != "" {
-			cfg.JWT.RefreshSecret = val
-		} else if val := os.Getenv("JWT_REFRESH_SECRET"); val != "" {
+		if val := os.Getenv("JWT_REFRESH_SECRET"); val != "" {
 			cfg.JWT.RefreshSecret = val
 		}
 	}
 	if cfg.LLM.APIKey == "" {
-		if val := os.Getenv("APP_LLM_API_KEY"); val != "" {
-			cfg.LLM.APIKey = val
-		} else if val := os.Getenv("LLM_API_KEY"); val != "" {
+		if val := os.Getenv("LLM_API_KEY"); val != "" {
 			cfg.LLM.APIKey = val
 		}
 	}
