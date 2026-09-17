@@ -12,12 +12,12 @@ server:
   shutdown_timeout: 5s
 
 database:
-  url: postgresql://postgres:postgres@localhost:5432/interview_practice?sslmode=disable
+  url: ""
   host: localhost
   port: 5432
   user: postgres
   password: postgres
-  name: interview_practice
+  name: ai_interview_practice
   ssl_mode: disable
   max_open_conns: 25
   max_idle_conns: 10
@@ -35,7 +35,7 @@ jwt:
 
 cors:
   allow_origins:
-    - "*"
+    - "http://localhost:3000"
   allow_methods:
     - GET
     - POST
@@ -70,6 +70,6 @@ tracer:
 llm:
   provider: gemini
   api_key: ""
-  model: gemini-1.5-flash
+  model: gemini-3.1-flash-lite
   timeout: 30s
   max_retries: 1
