@@ -35,7 +35,15 @@ func InitializeApplication(configPath string) (*Application, func(), error) {
 	authService := provider.ProvideAuthService(config, queries)
 	authHandler := provider.ProvideAuthHandler(authService)
 	healthHandler := provider.ProvideHealthHandler()
-	engine := provider.ProvideRouter(config, logger, authHandler, healthHandler)
+	repository := provider.ProvideJDRepository(pool)
+	application, err := provider.ProvideJDService(config, repository)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	jdHandler := provider.ProvideJDHandler(application)
+	engine := provider.ProvideRouter(config, logger, authHandler, healthHandler, jdHandler)
 	server := provider.ProvideHTTPServer(config, engine, logger)
 	tracer, cleanup3, err := provider.ProvideTracer(config, logger)
 	if err != nil {
@@ -43,14 +51,14 @@ func InitializeApplication(configPath string) (*Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	application := &Application{
+	mainApplication := &Application{
 		Server: server,
 		Pool:   pool,
 		Logger: logger,
 		Tracer: tracer,
 		Config: config,
 	}
-	return application, func() {
+	return mainApplication, func() {
 		cleanup3()
 		cleanup2()
 		cleanup()

@@ -53,8 +53,24 @@ func NormalizeInput(raw string) (string, error) {
 // occurrence wins for case-insensitive duplicate names. Conflicting duplicate
 // skill metadata is rejected rather than silently inventing a resolution.
 func ValidateCandidate(c domain.ExtractionCandidate) (domain.StructuredJD, error) {
+	return validateStructure(c, false)
+}
+
+// ValidateReviewed applies the shared competency contract to user-reviewed input.
+// Unlike extraction, persistence requires an explicitly selected seniority.
+func ValidateReviewed(jd domain.StructuredJD) (domain.StructuredJD, error) {
+	return validateStructure(domain.ExtractionCandidate(jd), true)
+}
+
+func validateStructure(c domain.ExtractionCandidate, reviewed bool) (domain.StructuredJD, error) {
 	invalid := func(reason string) (domain.StructuredJD, error) {
+		if reviewed {
+			return domain.StructuredJD{}, apperror.New(apperror.CodeValidation, reason)
+		}
 		return domain.StructuredJD{}, apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, errors.New(reason))
+	}
+	if reviewed && c.SeniorityLevel == nil {
+		return invalid("reviewed JD requires seniority")
 	}
 	if !utf8.ValidString(c.Title) || strings.TrimSpace(c.Title) == "" {
 		return invalid("title is required")

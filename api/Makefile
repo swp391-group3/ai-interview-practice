@@ -21,7 +21,7 @@ COMPOSE_FILE := $(ROOT_DIR)/.docker/compose.local.yaml
 MIGRATION_DIR := $(CURDIR)/migration
 GO_FILES := $(shell find . -type d \( -name .tools -o -name tmp -o -name vendor \) -prune -o -type f -name '*.go' -print)
 
-.PHONY: fmt fmt-check vet test test-race test-integration swagger build lint vuln check ensure-env db-up migrate run dev sqlc
+.PHONY: fmt fmt-check vet test test-race test-integration swagger build lint vuln check ensure-env db-up migrate migrate-force migrate-version run dev sqlc
 
 ensure-env:
 	@test -f "$(ENV_FILE)" || { printf '%s\n' "Missing $(ENV_FILE); copy ../.env.example to ../.env and set local values."; exit 1; }
@@ -44,8 +44,14 @@ dev: migrate $(AIR) $(SQLC)
 migrate: db-up $(MIGRATE)
 	@set -eu; set -a; . "$(ENV_FILE)"; set +a; : "$${DATABASE_URL:?DATABASE_URL must be set in $(ENV_FILE)}"; "$(MIGRATE)" -path "$(MIGRATION_DIR)" -database "$$DATABASE_URL" up
 
+migrate-force: db-up $(MIGRATE)
+	@set -eu; set -a; . "$(ENV_FILE)"; set +a; : "$${DATABASE_URL:?DATABASE_URL must be set in $(ENV_FILE)}"; : "$${v:?Specify version with v=<version>, e.g. make migrate-force v=2}"; "$(MIGRATE)" -path "$(MIGRATION_DIR)" -database "$$DATABASE_URL" force "$$v"
+
+migrate-version: db-up $(MIGRATE)
+	@set -eu; set -a; . "$(ENV_FILE)"; set +a; : "$${DATABASE_URL:?DATABASE_URL must be set in $(ENV_FILE)}"; "$(MIGRATE)" -path "$(MIGRATION_DIR)" -database "$$DATABASE_URL" version
+
 swagger: $(SWAG)
-	$(SWAG) init -g main.go -d cmd/api,internal/handler,internal/features/auth,pkg/response,pkg/apperror --parseInternal -o docs
+	$(SWAG) init -g main.go -d cmd/api,internal/handler,internal/features/auth,internal/features/jd/domain,pkg/response,pkg/apperror --parseInternal -o docs
 
 test-integration:
 	go test -tags=integration -count=1 -timeout=5m ./internal/...
