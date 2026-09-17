@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
+	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/domain"
 	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/service"
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 )
@@ -47,45 +48,45 @@ func New(chatModel model.BaseChatModel) (*EinoExtractor, error) {
 }
 
 // Extract makes one Generate call. The service owns regeneration and validation.
-func (e *EinoExtractor) Extract(ctx context.Context, normalizedJD string) (service.ExtractionCandidate, error) {
+func (e *EinoExtractor) Extract(ctx context.Context, normalizedJD string) (domain.ExtractionCandidate, error) {
 	data, err := json.Marshal(struct {
 		JD string `json:"untrusted_jd"`
 	}{normalizedJD})
 	if err != nil {
-		return service.ExtractionCandidate{}, fmt.Errorf("encode JD: %w", err)
+		return domain.ExtractionCandidate{}, fmt.Errorf("encode JD: %w", err)
 	}
 	response, err := e.model.Generate(ctx, []*schema.Message{
 		schema.SystemMessage(extractionInstruction),
 		schema.UserMessage(string(data)),
 	})
 	if err != nil {
-		return service.ExtractionCandidate{}, fmt.Errorf("generate extraction: %w", err)
+		return domain.ExtractionCandidate{}, fmt.Errorf("generate extraction: %w", err)
 	}
 	if err := ctx.Err(); err != nil {
-		return service.ExtractionCandidate{}, err
+		return domain.ExtractionCandidate{}, err
 	}
 	if response == nil {
-		return service.ExtractionCandidate{}, invalidOutput(fmt.Errorf("missing model response"))
+		return domain.ExtractionCandidate{}, invalidOutput(fmt.Errorf("missing model response"))
 	}
 	content := response.Content
 	if !utf8.ValidString(content) || len(content) > 1<<20 {
-		return service.ExtractionCandidate{}, invalidOutput(fmt.Errorf("invalid or oversized response content"))
+		return domain.ExtractionCandidate{}, invalidOutput(fmt.Errorf("invalid or oversized response content"))
 	}
 	if !strings.HasPrefix(strings.TrimSpace(content), "{") {
-		return service.ExtractionCandidate{}, invalidOutput(fmt.Errorf("expected JSON object"))
+		return domain.ExtractionCandidate{}, invalidOutput(fmt.Errorf("expected JSON object"))
 	}
-	var candidate service.ExtractionCandidate
+	var candidate domain.ExtractionCandidate
 	decoder := json.NewDecoder(strings.NewReader(content))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&candidate); err != nil {
-		return service.ExtractionCandidate{}, invalidOutput(fmt.Errorf("decode extraction JSON: %w", err))
+		return domain.ExtractionCandidate{}, invalidOutput(fmt.Errorf("decode extraction JSON: %w", err))
 	}
 	var trailing any
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 		if err == nil {
 			err = fmt.Errorf("multiple JSON values")
 		}
-		return service.ExtractionCandidate{}, invalidOutput(fmt.Errorf("trailing extraction data: %w", err))
+		return domain.ExtractionCandidate{}, invalidOutput(fmt.Errorf("trailing extraction data: %w", err))
 	}
 	return candidate, nil
 }

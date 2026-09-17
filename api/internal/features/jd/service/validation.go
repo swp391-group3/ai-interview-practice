@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/domain"
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 )
 
@@ -51,9 +52,9 @@ func NormalizeInput(raw string) (string, error) {
 // ValidateCandidate never relies on the provider's schema enforcement. First
 // occurrence wins for case-insensitive duplicate names. Conflicting duplicate
 // skill metadata is rejected rather than silently inventing a resolution.
-func ValidateCandidate(c ExtractionCandidate) (StructuredJD, error) {
-	invalid := func(reason string) (StructuredJD, error) {
-		return StructuredJD{}, apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, errors.New(reason))
+func ValidateCandidate(c domain.ExtractionCandidate) (domain.StructuredJD, error) {
+	invalid := func(reason string) (domain.StructuredJD, error) {
+		return domain.StructuredJD{}, apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, errors.New(reason))
 	}
 	if !utf8.ValidString(c.Title) || strings.TrimSpace(c.Title) == "" {
 		return invalid("title is required")
@@ -61,22 +62,22 @@ func ValidateCandidate(c ExtractionCandidate) (StructuredJD, error) {
 	if c.Skills == nil || c.Technologies == nil || c.DomainKnowledge == nil {
 		return invalid("skills, technologies and domainKnowledge arrays are required")
 	}
-	var seniority *Seniority
+	var seniority *domain.Seniority
 	if c.SeniorityLevel != nil {
 		switch *c.SeniorityLevel {
-		case Intern, Junior, Mid, Senior, Lead:
+		case domain.Intern, domain.Junior, domain.Mid, domain.Senior, domain.Lead:
 			value := *c.SeniorityLevel
 			seniority = &value
 		default:
 			return invalid("invalid seniorityLevel")
 		}
 	}
-	skills := make([]ExtractedSkill, 0, len(c.Skills))
+	skills := make([]domain.ExtractedSkill, 0, len(c.Skills))
 	for _, skill := range c.Skills {
 		if !validSkillCategory(skill.Category) {
 			return invalid("invalid skill category")
 		}
-		if skill.Requirement != "" && skill.Requirement != Required && skill.Requirement != Preferred {
+		if skill.Requirement != "" && skill.Requirement != domain.Required && skill.Requirement != domain.Preferred {
 			return invalid("invalid skill requirement")
 		}
 		if !utf8.ValidString(skill.Name) {
@@ -111,12 +112,12 @@ func ValidateCandidate(c ExtractionCandidate) (StructuredJD, error) {
 	if len(skills)+len(technologies)+len(domains) == 0 {
 		return invalid("at least one nonblank competency is required")
 	}
-	return StructuredJD{Title: strings.TrimSpace(c.Title), SeniorityLevel: seniority, Skills: skills, Technologies: technologies, DomainKnowledge: domains}, nil
+	return domain.StructuredJD{Title: strings.TrimSpace(c.Title), SeniorityLevel: seniority, Skills: skills, Technologies: technologies, DomainKnowledge: domains}, nil
 }
 
-func validSkillCategory(category SkillCategory) bool {
+func validSkillCategory(category domain.SkillCategory) bool {
 	switch category {
-	case ProgrammingLanguage, Framework, Database, Tool, Technology, Other:
+	case domain.ProgrammingLanguage, domain.Framework, domain.Database, domain.Tool, domain.Technology, domain.Other:
 		return true
 	default:
 		return false

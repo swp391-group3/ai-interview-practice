@@ -8,20 +8,21 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/domain"
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 )
 
 type fakeExtractor struct {
 	calls int
-	fn    func(context.Context, string) (ExtractionCandidate, error)
+	fn    func(context.Context, string) (domain.ExtractionCandidate, error)
 }
 
-func (f *fakeExtractor) Extract(ctx context.Context, jd string) (ExtractionCandidate, error) {
+func (f *fakeExtractor) Extract(ctx context.Context, jd string) (domain.ExtractionCandidate, error) {
 	f.calls++
 	return f.fn(ctx, jd)
 }
-func validCandidate() ExtractionCandidate {
-	return ExtractionCandidate{Title: "Backend Engineer", Skills: []ExtractedSkill{{Name: "Go", Category: ProgrammingLanguage, Requirement: Required}, {Name: "PostgreSQL", Category: Database}}, Technologies: []string{"Kafka"}, DomainKnowledge: []string{}}
+func validCandidate() domain.ExtractionCandidate {
+	return domain.ExtractionCandidate{Title: "Backend Engineer", Skills: []domain.ExtractedSkill{{Name: "Go", Category: domain.ProgrammingLanguage, Requirement: domain.Required}, {Name: "PostgreSQL", Category: domain.Database}}, Technologies: []string{"Kafka"}, DomainKnowledge: []string{}}
 }
 
 func assertCode(t *testing.T, err error, code apperror.Code) {
@@ -56,7 +57,7 @@ func TestInputPolicy(t *testing.T) {
 		{"length after normalization", strings.Repeat(" ", MaxJDLength) + strings.Repeat("界", 100), "", 100},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &fakeExtractor{fn: func(_ context.Context, jd string) (ExtractionCandidate, error) {
+			f := &fakeExtractor{fn: func(_ context.Context, jd string) (domain.ExtractionCandidate, error) {
 				if utf8.RuneCountInString(jd) != tt.length {
 					t.Errorf("normalized length = %d", utf8.RuneCountInString(jd))
 				}
@@ -80,10 +81,10 @@ func TestValidExtractionAndNormalization(t *testing.T) {
 	wantInput := strings.Repeat("界", 100) + "\n\nGo developer\nAPI work"
 	c := validCandidate()
 	c.Title = " Backend Engineer \n"
-	c.Skills = append(c.Skills, ExtractedSkill{Name: " go ", Category: ProgrammingLanguage, Requirement: Required}, ExtractedSkill{Name: " ", Category: Tool})
+	c.Skills = append(c.Skills, domain.ExtractedSkill{Name: " go ", Category: domain.ProgrammingLanguage, Requirement: domain.Required}, domain.ExtractedSkill{Name: " ", Category: domain.Tool})
 	c.Technologies = []string{" Go ", "go", " ", "SQL", "ſql"}
 	c.DomainKnowledge = []string{" Finance ", "finance", ""}
-	f := &fakeExtractor{fn: func(_ context.Context, jd string) (ExtractionCandidate, error) {
+	f := &fakeExtractor{fn: func(_ context.Context, jd string) (domain.ExtractionCandidate, error) {
 		if jd != wantInput {
 			t.Errorf("input = %q, want %q", jd, wantInput)
 		}
@@ -93,7 +94,7 @@ func TestValidExtractionAndNormalization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := StructuredJD{Title: "Backend Engineer", Skills: []ExtractedSkill{{Name: "Go", Category: ProgrammingLanguage, Requirement: Required}, {Name: "PostgreSQL", Category: Database}}, Technologies: []string{"Go", "SQL"}, DomainKnowledge: []string{"Finance"}}
+	want := domain.StructuredJD{Title: "Backend Engineer", Skills: []domain.ExtractedSkill{{Name: "Go", Category: domain.ProgrammingLanguage, Requirement: domain.Required}, {Name: "PostgreSQL", Category: domain.Database}}, Technologies: []string{"Go", "SQL"}, DomainKnowledge: []string{"Finance"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v want %#v", got, want)
 	}
@@ -108,20 +109,23 @@ func TestValidExtractionAndNormalization(t *testing.T) {
 func TestCandidateValidation(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
-		change func(*ExtractionCandidate)
+		change func(*domain.ExtractionCandidate)
 	}{
-		{"blank title", func(c *ExtractionCandidate) { c.Title = " " }},
-		{"missing array", func(c *ExtractionCandidate) { c.DomainKnowledge = nil }},
-		{"invalid seniority", func(c *ExtractionCandidate) { v := Seniority("expert"); c.SeniorityLevel = &v }},
-		{"difficulty is not seniority", func(c *ExtractionCandidate) { v := Seniority("hard"); c.SeniorityLevel = &v }},
-		{"blank seniority", func(c *ExtractionCandidate) { v := Seniority(""); c.SeniorityLevel = &v }},
-		{"interpersonal category", func(c *ExtractionCandidate) { c.Skills[0].Category = "soft" }},
-		{"invalid requirement", func(c *ExtractionCandidate) { c.Skills[0].Requirement = "mandatory" }},
-		{"no usable competency", func(c *ExtractionCandidate) { c.Skills = []ExtractedSkill{}; c.Technologies = []string{" "} }},
-		{"conflicting duplicate", func(c *ExtractionCandidate) {
-			c.Skills = append(c.Skills, ExtractedSkill{Name: "go", Category: Database, Requirement: Required})
+		{"blank title", func(c *domain.ExtractionCandidate) { c.Title = " " }},
+		{"missing array", func(c *domain.ExtractionCandidate) { c.DomainKnowledge = nil }},
+		{"invalid seniority", func(c *domain.ExtractionCandidate) { v := domain.Seniority("expert"); c.SeniorityLevel = &v }},
+		{"difficulty is not seniority", func(c *domain.ExtractionCandidate) { v := domain.Seniority("hard"); c.SeniorityLevel = &v }},
+		{"blank seniority", func(c *domain.ExtractionCandidate) { v := domain.Seniority(""); c.SeniorityLevel = &v }},
+		{"interpersonal category", func(c *domain.ExtractionCandidate) { c.Skills[0].Category = "soft" }},
+		{"invalid requirement", func(c *domain.ExtractionCandidate) { c.Skills[0].Requirement = "mandatory" }},
+		{"no usable competency", func(c *domain.ExtractionCandidate) {
+			c.Skills = []domain.ExtractedSkill{}
+			c.Technologies = []string{" "}
 		}},
-		{"invalid UTF8 name", func(c *ExtractionCandidate) { c.Technologies = []string{string([]byte{0xff})} }},
+		{"conflicting duplicate", func(c *domain.ExtractionCandidate) {
+			c.Skills = append(c.Skills, domain.ExtractedSkill{Name: "go", Category: domain.Database, Requirement: domain.Required})
+		}},
+		{"invalid UTF8 name", func(c *domain.ExtractionCandidate) { c.Technologies = []string{string([]byte{0xff})} }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			c := validCandidate()
@@ -130,7 +134,7 @@ func TestCandidateValidation(t *testing.T) {
 			assertCode(t, err, apperror.CodeInvalidExtractionOutput)
 		})
 	}
-	for _, category := range []SkillCategory{ProgrammingLanguage, Framework, Database, Tool, Technology, Other} {
+	for _, category := range []domain.SkillCategory{domain.ProgrammingLanguage, domain.Framework, domain.Database, domain.Tool, domain.Technology, domain.Other} {
 		c := validCandidate()
 		c.Skills[0].Category = category
 		c.Skills[0].Requirement = ""
@@ -138,7 +142,7 @@ func TestCandidateValidation(t *testing.T) {
 			t.Fatalf("category %s: %v", category, err)
 		}
 	}
-	for _, v := range []Seniority{Intern, Junior, Mid, Senior, Lead} {
+	for _, v := range []domain.Seniority{domain.Intern, domain.Junior, domain.Mid, domain.Senior, domain.Lead} {
 		c := validCandidate()
 		c.SeniorityLevel = &v
 		got, err := ValidateCandidate(c)
@@ -169,10 +173,10 @@ func TestRetryBudgetAndCauses(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &fakeExtractor{}
-			f.fn = func(context.Context, string) (ExtractionCandidate, error) {
+			f.fn = func(context.Context, string) (domain.ExtractionCandidate, error) {
 				if f.calls == 1 {
 					if tt.invalid {
-						return ExtractionCandidate{}, nil
+						return domain.ExtractionCandidate{}, nil
 					}
 					return validCandidate(), tt.first
 				}
@@ -193,11 +197,11 @@ func TestRetryBudgetAndCauses(t *testing.T) {
 		})
 	}
 	f := &fakeExtractor{}
-	f.fn = func(context.Context, string) (ExtractionCandidate, error) {
+	f.fn = func(context.Context, string) (domain.ExtractionCandidate, error) {
 		if f.calls == 1 {
-			return ExtractionCandidate{}, apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, secretCause)
+			return domain.ExtractionCandidate{}, apperror.Wrap(apperror.CodeInvalidExtractionOutput, invalidExtractionOutputMessage, secretCause)
 		}
-		return ExtractionCandidate{}, nil
+		return domain.ExtractionCandidate{}, nil
 	}
 	_, err := newService(t, f, 1).Extract(context.Background(), strings.Repeat("a", 100))
 	assertCode(t, err, apperror.CodeInvalidExtractionOutput)
@@ -209,9 +213,9 @@ func TestRetryBudgetAndCauses(t *testing.T) {
 func TestCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	f := &fakeExtractor{fn: func(context.Context, string) (ExtractionCandidate, error) {
+	f := &fakeExtractor{fn: func(context.Context, string) (domain.ExtractionCandidate, error) {
 		t.Fatal("called after cancellation")
-		return ExtractionCandidate{}, nil
+		return domain.ExtractionCandidate{}, nil
 	}}
 	_, err := newService(t, f, 1).Extract(ctx, strings.Repeat("a", 100))
 	if !errors.Is(err, context.Canceled) {
@@ -219,7 +223,7 @@ func TestCancellation(t *testing.T) {
 	}
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
-	f.fn = func(ctx context.Context, _ string) (ExtractionCandidate, error) {
+	f.fn = func(ctx context.Context, _ string) (domain.ExtractionCandidate, error) {
 		cancel()
 		return validCandidate(), ctx.Err()
 	}

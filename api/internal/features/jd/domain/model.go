@@ -1,4 +1,10 @@
-package service
+package domain
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // Seniority is optional: nil means the JD supplies insufficient evidence.
 type Seniority string
@@ -53,4 +59,38 @@ type StructuredJD struct {
 	Skills          []ExtractedSkill `json:"skills"`
 	Technologies    []string         `json:"technologies"`
 	DomainKnowledge []string         `json:"domainKnowledge"`
+}
+
+// Status is the persisted lifecycle state of a job description.
+type Status string
+
+const (
+	StatusUploaded   Status = "uploaded"
+	StatusParsing    Status = "parsing"
+	StatusParsed     Status = "parsed"
+	StatusCustomized Status = "customized"
+	StatusLocked     Status = "locked"
+	StatusFailed     Status = "failed"
+)
+
+// JD is the repository-facing representation of a persisted job description.
+type JD struct {
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	RawText      string
+	StructuredJD StructuredJD
+	Status       Status
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// CreateInput contains the original JD text and its reviewed structure.
+type CreateInput struct {
+	RawText      string
+	StructuredJD StructuredJD
+}
+
+// UpdateInput contains only fields which may change after JD creation.
+type UpdateInput struct {
+	StructuredJD StructuredJD
 }
