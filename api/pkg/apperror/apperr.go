@@ -5,6 +5,7 @@ import "fmt"
 type Code string
 
 const (
+	CodeJDNotFound              Code = "JD_NOT_FOUND"
 	CodeInvalidCredentials      Code = "INVALID_CREDENTIALS"
 	CodeAccountNotFound         Code = "USER_NOT_FOUND"
 	CodeAccountLocked           Code = "USER_INACTIVE"
