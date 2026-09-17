@@ -26,6 +26,13 @@ func TestError(t *testing.T) {
 		{"account locked", apperror.CodeAccountLocked, http.StatusForbidden},
 		{"token", apperror.CodeInvalidToken, http.StatusUnauthorized},
 		{"validation", apperror.CodeValidation, http.StatusBadRequest},
+		{"JD input", apperror.CodeInvalidJDInput, http.StatusBadRequest},
+		{"JD short", apperror.CodeJDTooShort, http.StatusBadRequest},
+		{"JD long", apperror.CodeJDTooLong, http.StatusBadRequest},
+		{"JD missing", apperror.CodeJDNotFound, http.StatusNotFound},
+		{"JD in use", apperror.CodeJDInUse, http.StatusConflict},
+		{"extraction", apperror.CodeExtractionFailed, http.StatusBadGateway},
+		{"invalid output", apperror.CodeInvalidExtractionOutput, http.StatusBadGateway},
 		{"internal", apperror.CodeInternal, http.StatusInternalServerError},
 		{"unknown code", apperror.Code("FUTURE_CODE"), http.StatusInternalServerError},
 	} {

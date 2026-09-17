@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/domain"
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 )
@@ -63,6 +64,11 @@ func (r *Repository) Update(ctx context.Context, userID, id uuid.UUID, input dom
 
 func (r *Repository) Delete(ctx context.Context, userID, id uuid.UUID) error {
 	_, err := r.queries.DeleteJD(ctx, DeleteJDParams{ID: id, UserID: userID})
+	var pgErr *pgconn.PgError
+	// PostgreSQL can report either foreign_key_violation or restrict_violation.
+	if errors.As(err, &pgErr) && (pgErr.Code == "23503" || pgErr.Code == "23001") {
+		return apperror.Wrap(apperror.CodeJDInUse, "job description is in use", err)
+	}
 	return persistenceError(err)
 }
 

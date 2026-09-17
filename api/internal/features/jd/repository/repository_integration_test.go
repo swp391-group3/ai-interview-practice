@@ -147,6 +147,17 @@ func TestJDRepository(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got, updated) {
 		t.Fatalf("update not persisted: %+v, %v", got, err)
 	}
+	if _, err := db.Pool.Exec(ctx, "INSERT INTO interview_blueprints (job_description_id, difficulty, duration_minutes, question_count, blueprint_data, contract_version) VALUES ($1, 'medium', 30, 5, '{}', 1)", created.ID); err != nil {
+		t.Fatal(err)
+	}
+	assertNotFound(repo.Delete(ctx, other, created.ID))
+	var inUse *apperror.AppError
+	if err := repo.Delete(ctx, owner, created.ID); !errors.As(err, &inUse) || inUse.Code != apperror.CodeJDInUse {
+		t.Fatalf("want JD_IN_USE, got %v", err)
+	}
+	if _, err := db.Pool.Exec(ctx, "DELETE FROM interview_blueprints WHERE job_description_id = $1", created.ID); err != nil {
+		t.Fatal(err)
+	}
 	if err := repo.Delete(ctx, owner, created.ID); err != nil {
 		t.Fatal(err)
 	}
