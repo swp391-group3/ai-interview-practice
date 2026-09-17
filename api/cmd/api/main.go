@@ -9,58 +9,77 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/swp391-group3/ai-interview-practice/api/internal/pkg/logger"
 )
 
+// @title AI Interview Practice API
+// @version 1.0.0
+// @description Existing backend foundation endpoints. Health is liveness only; login returns a normalized envelope.
+// @BasePath /
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "path to config file")
 	flag.Parse()
-
-	app, err := InitializeApplication(configPath)
-	if err != nil {
-		fmt.Printf("Failed to initialize application: %v\n", err)
+	if err := run(configPath); err != nil {
+		fmt.Fprintf(os.Stderr, "API stopped: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func run(configPath string) error {
+	app, cleanup, err := InitializeApplication(configPath)
+	if err != nil {
+		return fmt.Errorf("initialize application: %w", err)
+	}
+	defer cleanup()
 
 	app.Logger.Info("Starting AI Interview Practice API",
 		logger.String("environment", app.Config.App.Environment),
 		logger.String("version", app.Config.App.Version),
 	)
 
-	// Clean up resources when application shuts down
-	defer func() {
-		if app.Pool != nil {
-			app.Logger.Info("Closing database connection pool...")
-			app.Pool.Close()
-		}
-		if app.Tracer != nil {
-			_ = app.Tracer.Shutdown(context.Background())
-		}
-		_ = app.Logger.Sync()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	return serve(ctx, app.Server, app.Config.Server.ShutdownTimeout)
+}
 
-	// Run HTTP server in a goroutine
+type httpServer interface {
+	Start() error
+	Shutdown(context.Context) error
+	Close() error
+}
+
+func serve(ctx context.Context, server httpServer, timeout time.Duration) error {
+	serverErrors := make(chan error, 1)
+
 	go func() {
-		if err := app.Server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			app.Logger.Fatal("HTTP server failed to start", logger.Error(err))
-		}
+		serverErrors <- server.Start()
 	}()
 
-	// Wait for termination signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	app.Logger.Info("Shutting down server gracefully...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), app.Config.Server.ShutdownTimeout)
-	defer cancel()
-
-	if err := app.Server.Shutdown(ctx); err != nil {
-		app.Logger.Fatal("Server forced to shutdown", logger.Error(err))
+	select {
+	case <-ctx.Done():
+		// Normal shutdown path.
+	case startErr := <-serverErrors:
+		if errors.Is(startErr, http.ErrServerClosed) {
+			return nil
+		}
+		return startErr
 	}
 
-	app.Logger.Info("Server exited properly")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	shutdownErr := server.Shutdown(shutdownCtx)
+	if shutdownErr != nil {
+		shutdownErr = errors.Join(shutdownErr, server.Close())
+	}
+
+	startErr := <-serverErrors
+	if errors.Is(startErr, http.ErrServerClosed) {
+		startErr = nil
+	}
+
+	return errors.Join(startErr, shutdownErr)
 }
