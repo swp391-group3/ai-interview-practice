@@ -1,7 +1,18 @@
-"use client";
-
-import { useId, useState } from "react";
-import styles from "./rolecue-landing.module.css";
+import { Plus } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
+import { Reveal } from "./reveal";
+import {
+  eyebrow,
+  landingContainer,
+  sectionIntro,
+  sectionTitle,
+} from "./rolecue-landing-styles";
 
 const questions = [
   {
@@ -27,54 +38,60 @@ const questions = [
 ] as const;
 
 export function FaqSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const listId = useId();
-
   return (
-    <section className={styles.faqSection} id="feedback">
-      <div className={styles.container}>
-        <div className={styles.faqGrid}>
-          <div className={styles.faqIntro} data-rolecue-reveal>
-            <p className={styles.eyebrow}>A few useful details</p>
-            <h2 className={styles.sectionTitle}>
+    <section
+      className="scroll-mt-26 border-t border-(--rolecue-border-soft) py-[clamp(8rem,15vw,14rem)] max-[760px]:py-30"
+      id="questions"
+    >
+      <div className={landingContainer}>
+        <div className="grid grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] items-start gap-[clamp(3rem,9vw,11rem)] max-[1080px]:gap-16 max-[760px]:grid-cols-1 max-[760px]:gap-14">
+          <Reveal className="max-w-140">
+            <p className={eyebrow}>A few useful details</p>
+            <h2 className={sectionTitle}>
               Preparation should make the next question feel less strange.
             </h2>
-            <p className={styles.sectionIntro}>
+            <p className={cn(sectionIntro, "ml-0")}>
               A quiet, practical layer for the things people usually need to
               know before they begin.
             </p>
-          </div>
-          <div className={styles.faqList} data-rolecue-reveal>
-            {questions.map((item, index) => {
-              const isOpen = openIndex === index;
-              const answerId = `${listId}-${index}`;
-              return (
-                <article className={styles.faqItem} key={item.question}>
-                  <button
-                    aria-controls={answerId}
-                    aria-expanded={isOpen}
-                    className={styles.faqQuestion}
-                    onClick={() => setOpenIndex(isOpen ? null : index)}
-                    type="button"
+          </Reveal>
+
+          <Reveal>
+            <Accordion
+              collapsible
+              className="border-t border-(--rolecue-border)"
+              type="single"
+            >
+              {questions.map((item, index) => (
+                <AccordionItem
+                  className="border-b border-(--rolecue-border)"
+                  key={item.question}
+                  value={`question-${index + 1}`}
+                >
+                  <AccordionTrigger
+                    className="group grid min-h-[5.15rem] grid-cols-[2.6rem_1fr_auto] items-center gap-3 rounded-none border-0 px-0 py-4 text-left text-(--rolecue-ink) no-underline hover:no-underline max-[620px]:grid-cols-[2rem_1fr_auto]"
+                    showIndicator={false}
                   >
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <strong>{item.question}</strong>
-                    <i aria-hidden="true">+</i>
-                  </button>
-                  <div
-                    className={`${styles.faqAnswerWrap} ${
-                      isOpen ? styles.faqAnswerOpen : ""
-                    }`}
-                    id={answerId}
-                  >
-                    <div>
-                      <p>{item.answer}</p>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                    <span className="font-mono text-(length:--rolecue-type-label) font-bold text-(--rolecue-ink-subtle)">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <strong className="text-(length:--rolecue-type-heading-sm) tracking-(--rolecue-tracking-heading) font-[690]">
+                      {item.question}
+                    </strong>
+                    <span
+                      aria-hidden="true"
+                      className="grid size-8 place-items-center rounded-full border border-(--rolecue-border) text-(--rolecue-ink) transition-transform duration-(--duration-fast) ease-(--ease-smooth-out) group-data-[state=open]:rotate-45 motion-reduce:transform-none! motion-reduce:transition-none!"
+                    >
+                      <Plus size={18} strokeWidth={1.5} />
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-[1.65rem] pl-[3.35rem] text-(length:--rolecue-type-body-sm) leading-(--rolecue-leading-copy) text-(--rolecue-ink-muted) max-[620px]:pl-8">
+                    <p className="m-0 max-w-148">{item.answer}</p>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </Reveal>
         </div>
       </div>
     </section>
