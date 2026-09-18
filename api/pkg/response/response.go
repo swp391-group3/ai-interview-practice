@@ -21,12 +21,19 @@ type ErrorBody struct {
 }
 
 var httpStatusByCode = map[apperror.Code]int{
-	apperror.CodeInvalidCredentials: http.StatusUnauthorized,
-	apperror.CodeAccountNotFound:    http.StatusNotFound,
-	apperror.CodeAccountLocked:      http.StatusForbidden,
-	apperror.CodeInvalidToken:       http.StatusUnauthorized,
-	apperror.CodeValidation:         http.StatusBadRequest,
-	apperror.CodeInternal:           http.StatusInternalServerError,
+	apperror.CodeJDInUse:                 http.StatusConflict,
+	apperror.CodeJDNotFound:              http.StatusNotFound,
+	apperror.CodeInvalidJDInput:          http.StatusBadRequest,
+	apperror.CodeJDTooShort:              http.StatusBadRequest,
+	apperror.CodeJDTooLong:               http.StatusBadRequest,
+	apperror.CodeExtractionFailed:        http.StatusBadGateway,
+	apperror.CodeInvalidExtractionOutput: http.StatusBadGateway,
+	apperror.CodeInvalidCredentials:      http.StatusUnauthorized,
+	apperror.CodeAccountNotFound:         http.StatusNotFound,
+	apperror.CodeAccountLocked:           http.StatusForbidden,
+	apperror.CodeInvalidToken:            http.StatusUnauthorized,
+	apperror.CodeValidation:              http.StatusBadRequest,
+	apperror.CodeInternal:                http.StatusInternalServerError,
 }
 
 func OK(c *gin.Context, data interface{}) {

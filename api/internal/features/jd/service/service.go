@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"fmt"
+
+	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/domain"
 )
 
 // Extractor performs one attempt. Implementations must not retry internally.
 // normalizedJD is untrusted data, never a source of executable instructions.
 type Extractor interface {
-	Extract(ctx context.Context, normalizedJD string) (ExtractionCandidate, error)
+	Extract(ctx context.Context, normalizedJD string) (domain.ExtractionCandidate, error)
 }
 
 type Service struct {

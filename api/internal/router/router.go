@@ -17,6 +17,7 @@ type Router struct {
 	logger        *logger.Logger
 	authHandler   *handler.AuthHandler
 	healthHandler *handler.HealthHandler
+	jdHandler     *handler.JDHandler
 }
 
 func NewRouter(
@@ -24,12 +25,14 @@ func NewRouter(
 	logger *logger.Logger,
 	authHandler *handler.AuthHandler,
 	healthHandler *handler.HealthHandler,
+	jdHandler *handler.JDHandler,
 ) *Router {
 	return &Router{
 		cfg:           cfg,
 		logger:        logger,
 		authHandler:   authHandler,
 		healthHandler: healthHandler,
+		jdHandler:     jdHandler,
 	}
 }
 
@@ -53,5 +56,12 @@ func (r *Router) Setup() *gin.Engine {
 		auth.POST("/login", r.authHandler.Login)
 	}
 
+	jds := router.Group("/jds", middleware.RequireAuth(r.cfg))
+	jds.POST("/analyze", r.jdHandler.Analyze)
+	jds.POST("", r.jdHandler.Create)
+	jds.GET("", r.jdHandler.List)
+	jds.GET("/:id", r.jdHandler.Get)
+	jds.PUT("/:id", r.jdHandler.Update)
+	jds.DELETE("/:id", r.jdHandler.Delete)
 	return router
 }

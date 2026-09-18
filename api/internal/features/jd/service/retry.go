@@ -5,23 +5,24 @@ import (
 	"errors"
 	"time"
 
+	"github.com/swp391-group3/ai-interview-practice/api/internal/features/jd/domain"
 	"github.com/swp391-group3/ai-interview-practice/api/pkg/apperror"
 )
 
 const extractionFailedMessage = "Job description extraction failed."
 
 // The service owns one shared retry budget, including domain-invalid proposals.
-func (s *Service) extractWithRetry(ctx context.Context, jd string) (StructuredJD, error) {
+func (s *Service) extractWithRetry(ctx context.Context, jd string) (domain.StructuredJD, error) {
 	for attempt := 0; ; attempt++ {
 		if err := ctx.Err(); err != nil {
-			return StructuredJD{}, apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, err)
+			return domain.StructuredJD{}, apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, err)
 		}
 		candidate, err := s.extractor.Extract(ctx, jd)
 		if ctx.Err() != nil {
-			return StructuredJD{}, apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, ctx.Err())
+			return domain.StructuredJD{}, apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, ctx.Err())
 		}
 		if err == nil {
-			var result StructuredJD
+			var result domain.StructuredJD
 			result, err = ValidateCandidate(candidate)
 			if err == nil {
 				return result, nil
@@ -34,14 +35,14 @@ func (s *Service) extractWithRetry(ctx context.Context, jd string) (StructuredJD
 			err = apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, err)
 		}
 		if attempt >= s.maxRetries || !shouldRetry(err) {
-			return StructuredJD{}, err
+			return domain.StructuredJD{}, err
 		}
 		// Never replay invalid output as instructions.
 		timer := time.NewTimer(100 * time.Millisecond)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
-			return StructuredJD{}, apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, ctx.Err())
+			return domain.StructuredJD{}, apperror.Wrap(apperror.CodeExtractionFailed, extractionFailedMessage, ctx.Err())
 		case <-timer.C:
 		}
 	}

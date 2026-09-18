@@ -22,7 +22,7 @@ type Postgres struct {
 	Pool *pgxpool.Pool
 }
 
-// NewPostgres starts PostgreSQL 18.6 and applies the checked-in baseline migration.
+// NewPostgres starts PostgreSQL 18.6 and applies all checked-in up migrations.
 // Call once per test (or parent test); all resources are registered with t.Cleanup.
 func NewPostgres(t testing.TB) *Postgres {
 	t.Helper()
@@ -54,12 +54,21 @@ func NewPostgres(t testing.TB) *Postgres {
 	if !ok {
 		t.Fatal("locate baseline migration")
 	}
-	migration, err := os.ReadFile(filepath.Join(filepath.Dir(source), "../../migration/000001_init.up.sql"))
+	migrations, err := filepath.Glob(filepath.Join(filepath.Dir(source), "../../migration/*.up.sql"))
 	if err != nil {
-		t.Fatalf("read baseline migration: %v", err)
+		t.Fatalf("locate migrations: %v", err)
 	}
-	if _, err := pool.Exec(ctx, string(migration)); err != nil {
-		t.Fatalf("apply baseline migration: %v", err)
+	if len(migrations) == 0 {
+		t.Fatal("no up migrations found")
+	}
+	for _, path := range migrations {
+		migration, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read migration %s: %v", path, err)
+		}
+		if _, err := pool.Exec(ctx, string(migration)); err != nil {
+			t.Fatalf("apply migration %s: %v", path, err)
+		}
 	}
 	return &Postgres{DSN: dsn, Pool: pool}
 }

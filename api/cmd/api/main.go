@@ -18,6 +18,10 @@ import (
 // @version 1.0.0
 // @description Existing backend foundation endpoints. Health is liveness only; login returns a normalized envelope.
 // @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Bearer access token, formatted as "Bearer <token>".
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "path to config file")
