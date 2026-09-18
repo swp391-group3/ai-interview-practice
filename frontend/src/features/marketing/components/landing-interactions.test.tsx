@@ -1,18 +1,26 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { FaqSection } from "./faq-section";
 import { PracticeSection } from "./practice-section";
+import { RoleCueLanding } from "./rolecue-landing";
 
-it("switches the active practice stage with tab semantics", () => {
+it("uses Radix Tabs keyboard behavior to switch the practice stage", async () => {
   render(<PracticeSection />);
 
-  const responseTab = screen.getByRole("tab", { name: /try the response/i });
-  fireEvent.click(responseTab);
+  const roleTab = screen.getByRole("tab", { name: /read the role/i });
+  roleTab.focus();
+  fireEvent.keyDown(roleTab, { key: "ArrowRight" });
 
-  expect(responseTab).toHaveAttribute("aria-selected", "true");
-  expect(screen.getByRole("tabpanel")).toHaveAttribute(
-    "data-stage",
-    "response",
+  const responseTab = screen.getByRole("tab", { name: /try the response/i });
+
+  await waitFor(() =>
+    expect(responseTab).toHaveAttribute("aria-selected", "true"),
+  );
+  const responsePanel = screen.getByRole("tabpanel");
+  expect(responsePanel).toHaveAttribute("data-stage", "response");
+  expect(responsePanel).toHaveAttribute(
+    "aria-describedby",
+    "practice-stage-response-description",
   );
   expect(
     screen.getByRole("heading", {
@@ -21,7 +29,7 @@ it("switches the active practice stage with tab semantics", () => {
   ).toBeVisible();
 });
 
-it("opens and closes an FAQ response with accessible disclosure state", () => {
+it("opens and closes an FAQ response with shadcn Accordion state", async () => {
   render(<FaqSection />);
 
   const question = screen.getByRole("button", {
@@ -30,10 +38,21 @@ it("opens and closes an FAQ response with accessible disclosure state", () => {
   fireEvent.click(question);
 
   expect(question).toHaveAttribute("aria-expanded", "true");
-  expect(
-    screen.getByText(/centers reflection, examples, and clearer choices/i),
-  ).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen.getByText(/centers reflection, examples, and clearer choices/i),
+    ).toBeVisible(),
+  );
 
   fireEvent.click(question);
   expect(question).toHaveAttribute("aria-expanded", "false");
+});
+
+it("targets the method section from the hero CTA", () => {
+  render(<RoleCueLanding />);
+
+  expect(screen.getByRole("link", { name: "See the method" })).toHaveAttribute(
+    "href",
+    "#method",
+  );
 });
