@@ -17,18 +17,19 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeApplication(configPath string) (*Application, error) {
+func InitializeApplication(configPath string) (*Application, func(), error) {
 	config, err := provider.ProvideConfig(configPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	logger, err := provider.ProvideLogger(config)
+	logger, cleanup, err := provider.ProvideLogger(config)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	pool, err := provider.ProvideDatabasePool(config, logger)
+	pool, cleanup2, err := provider.ProvideDatabasePool(config, logger)
 	if err != nil {
-		return nil, err
+		cleanup()
+		return nil, nil, err
 	}
 	queries := provider.ProvideAuthQueries(pool)
 	authService := provider.ProvideAuthService(config, queries)
@@ -36,9 +37,11 @@ func InitializeApplication(configPath string) (*Application, error) {
 	healthHandler := provider.ProvideHealthHandler()
 	engine := provider.ProvideRouter(config, logger, authHandler, healthHandler)
 	server := provider.ProvideHTTPServer(config, engine, logger)
-	tracer, err := provider.ProvideTracer(config)
+	tracer, cleanup3, err := provider.ProvideTracer(config, logger)
 	if err != nil {
-		return nil, err
+		cleanup2()
+		cleanup()
+		return nil, nil, err
 	}
 	application := &Application{
 		Server: server,
@@ -47,7 +50,11 @@ func InitializeApplication(configPath string) (*Application, error) {
 		Tracer: tracer,
 		Config: config,
 	}
-	return application, nil
+	return application, func() {
+		cleanup3()
+		cleanup2()
+		cleanup()
+	}, nil
 }
 
 // wire.go:

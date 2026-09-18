@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -162,32 +161,41 @@ func Load(configPath string) (*Config, error) {
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+	v.AllowEmptyEnv(true)
 
 	// Explicitly bind environment variables
-	_ = v.BindEnv("jwt.access_secret", "JWT_ACCESS_SECRET")
-	_ = v.BindEnv("jwt.refresh_secret", "JWT_REFRESH_SECRET")
-	_ = v.BindEnv("llm.api_key", "LLM_API_KEY")
+	for key, env := range map[string]string{
+		"database.url":             "DATABASE_URL",
+		"database.name":            "DB_DATABASE",
+		"database.user":            "DB_USERNAME",
+		"database.password":        "DB_PASSWORD",
+		"database.port":            "DB_PORT",
+		"jwt.access_secret":        "JWT_ACCESS_SECRET",
+		"jwt.refresh_secret":       "JWT_REFRESH_SECRET",
+		"jwt.access_token_expiry":  "JWT_ACCESS_EXPIRY",
+		"jwt.refresh_token_expiry": "JWT_REFRESH_EXPIRY",
+		"llm.provider":             "LLM_PROVIDER",
+		"llm.api_key":              "LLM_API_KEY",
+		"llm.model":                "LLM_MODEL",
+		"llm.timeout":              "LLM_TIMEOUT",
+		"llm.max_retries":          "LLM_MAX_RETRIES",
+	} {
+		if err := v.BindEnv(key, env); err != nil {
+			return nil, fmt.Errorf("bind %s: %w", key, err)
+		}
+	}
+
+	// The original JWT env contract uses integer seconds; also accept Go durations.
+	for _, key := range []string{"jwt.access_token_expiry", "jwt.refresh_token_expiry"} {
+		value := v.GetString(key)
+		if _, err := strconv.ParseInt(value, 10, 64); err == nil {
+			v.Set(key, value+"s")
+		}
+	}
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-	}
-
-	// Resolve environment values in Go if not picked up by viper unmarshal
-	if cfg.JWT.AccessSecret == "" {
-		if val := os.Getenv("JWT_ACCESS_SECRET"); val != "" {
-			cfg.JWT.AccessSecret = val
-		}
-	}
-	if cfg.JWT.RefreshSecret == "" {
-		if val := os.Getenv("JWT_REFRESH_SECRET"); val != "" {
-			cfg.JWT.RefreshSecret = val
-		}
-	}
-	if cfg.LLM.APIKey == "" {
-		if val := os.Getenv("LLM_API_KEY"); val != "" {
-			cfg.LLM.APIKey = val
-		}
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -216,7 +224,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.port", 5432)
 	v.SetDefault("database.user", "postgres")
 	v.SetDefault("database.password", "postgres")
-	v.SetDefault("database.name", "interview_practice")
+	v.SetDefault("database.name", "ai_interview_practice")
 	v.SetDefault("database.ssl_mode", "disable")
 	v.SetDefault("database.max_open_conns", 25)
 	v.SetDefault("database.max_idle_conns", 10)
@@ -230,7 +238,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("jwt.issuer", "ai-interview-practice")
 
 	// CORS defaults
-	v.SetDefault("cors.allow_origins", []string{"*"})
+	v.SetDefault("cors.allow_origins", []string{"http://localhost:3000"})
 	v.SetDefault("cors.allow_methods", []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"})
 	v.SetDefault("cors.allow_headers", []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"})
 	v.SetDefault("cors.expose_headers", []string{"X-Request-ID"})
@@ -252,18 +260,31 @@ func setDefaults(v *viper.Viper) {
 
 	// LLM defaults
 	v.SetDefault("llm.provider", "gemini")
-	v.SetDefault("llm.model", "gemini-1.5-flash")
+	v.SetDefault("llm.model", "gemini-3.1-flash-lite")
 	v.SetDefault("llm.timeout", "30s")
 	v.SetDefault("llm.max_retries", 1)
 }
 
 // Validate checks configuration integrity and security constraints.
 func (c *Config) Validate() error {
+	if c.CORS.AllowCredentials {
+		if len(c.CORS.AllowOrigins) == 0 {
+			return errors.New("credentialed CORS requires explicit allowed origins")
+		}
+		for _, origin := range c.CORS.AllowOrigins {
+			if origin == "*" || strings.TrimSpace(origin) == "" {
+				return errors.New("credentialed CORS requires explicit allowed origins, without wildcard")
+			}
+		}
+	}
+	if c.JWT.AccessTokenExpiry <= 0 || c.JWT.RefreshTokenExpiry <= 0 {
+		return errors.New("JWT expiry must be positive")
+	}
 	if c.IsProduction() {
-		if c.JWT.AccessSecret == "" {
+		if strings.TrimSpace(c.JWT.AccessSecret) == "" {
 			return errors.New("jwt.access_secret is required in production")
 		}
-		if c.JWT.RefreshSecret == "" {
+		if strings.TrimSpace(c.JWT.RefreshSecret) == "" {
 			return errors.New("jwt.refresh_secret is required in production")
 		}
 		if c.JWT.AccessSecret == c.JWT.RefreshSecret {

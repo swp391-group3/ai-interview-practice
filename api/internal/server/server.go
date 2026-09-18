@@ -39,3 +39,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	s.logger.Info("Shutting down HTTP server...")
 	return s.httpServer.Shutdown(ctx)
 }
+
+// Close terminates active connections if graceful shutdown cannot complete.
+func (s *Server) Close() error {
+	return s.httpServer.Close()
+}

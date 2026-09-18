@@ -20,6 +20,21 @@ func NewAuthHandler(authService auth.AuthService) *AuthHandler {
 	}
 }
 
+// Login godoc
+// @Summary Log in with email and password
+// @Description Returns an access token in data and sets the refresh cookie scoped to /auth/refresh. A refresh endpoint is not currently registered.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body auth.LoginRequest true "Login credentials"
+// @Success 200 {object} response.Envelope{data=string} "Access token"
+// @Header 200 {string} Set-Cookie "Refresh token cookie; Path=/auth/refresh"
+// @Failure 400 {object} response.Envelope "Invalid request"
+// @Failure 401 {object} response.Envelope "Invalid credentials"
+// @Failure 403 {object} response.Envelope "Account locked"
+// @Failure 404 {object} response.Envelope "Account not found"
+// @Failure 500 {object} response.Envelope "Internal error"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req auth.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

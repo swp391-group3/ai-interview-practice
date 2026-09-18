@@ -2,6 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/swp391-group3/ai-interview-practice/api/docs"
 
 	"github.com/swp391-group3/ai-interview-practice/api/internal/config"
 	"github.com/swp391-group3/ai-interview-practice/api/internal/handler"
@@ -43,6 +46,7 @@ func (r *Router) Setup() *gin.Engine {
 	router.Use(middleware.CORSMiddleware(r.cfg.CORS))
 
 	router.GET("/health", r.healthHandler.Health)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	auth := router.Group("/auth")
 	{

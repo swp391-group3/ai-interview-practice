@@ -12,17 +12,15 @@ func LoggingMiddleware(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
 
 		c.Next()
 
 		latency := time.Since(start)
 		status := c.Writer.Status()
 
-		log.Info("HTTP Request",
+		log.WithContext(c.Request.Context()).Info("HTTP Request",
 			logger.String("method", c.Request.Method),
 			logger.String("path", path),
-			logger.String("query", query),
 			logger.Int("status", status),
 			logger.Duration("latency", latency),
 			logger.String("client_ip", c.ClientIP()),

@@ -55,6 +55,7 @@ func NewDatabasePool(cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
 	}
 
 	if err = pool.Ping(ctx); err != nil {
+		pool.Close()
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
@@ -77,6 +78,7 @@ func NewDatabasePoolWithDSN(connStr string) (*pgxpool.Pool, error) {
 	}
 
 	if err = pool.Ping(ctx); err != nil {
+		pool.Close()
 		return nil, err
 	}
 

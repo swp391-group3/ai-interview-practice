@@ -22,7 +22,7 @@ type Application struct {
 	Config *config.Config
 }
 
-func InitializeApplication(configPath string) (*Application, error) {
+func InitializeApplication(configPath string) (*Application, func(), error) {
 	wire.Build(
 		provider.ProvideConfig,
 		provider.ProvideLogger,
@@ -36,5 +36,5 @@ func InitializeApplication(configPath string) (*Application, error) {
 		provider.ProvideHTTPServer,
 		wire.Struct(new(Application), "*"),
 	)
-	return &Application{}, nil
+	return &Application{}, nil, nil
 }

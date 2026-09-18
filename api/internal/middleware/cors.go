@@ -13,21 +13,32 @@ import (
 func CORSMiddleware(cfg config.CORSConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
+		if origin == "" {
+			c.Next()
+			return
+		}
+		c.Writer.Header().Add("Vary", "Origin")
 
 		allowed := false
+		wildcard := false
 		for _, o := range cfg.AllowOrigins {
-			if o == "*" || o == origin {
+			if o == "*" {
+				wildcard = true
+			}
+			if o == origin {
 				allowed = true
-				break
 			}
 		}
+		// Fail closed even if constructed without config validation.
+		if (wildcard && cfg.AllowCredentials) || (!allowed && !wildcard) {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
 
-		if allowed {
-			if len(cfg.AllowOrigins) == 1 && cfg.AllowOrigins[0] == "*" && !cfg.AllowCredentials {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			} else {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			}
+		if wildcard {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 
 		c.Writer.Header().Set("Access-Control-Allow-Methods", strings.Join(cfg.AllowMethods, ", "))
