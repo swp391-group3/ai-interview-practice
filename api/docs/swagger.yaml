@@ -54,6 +54,21 @@ definitions:
         description: Empty means the JD does not state whether the skill is required
           or preferred.
     type: object
+  domain.ListItem:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      seniorityLevel:
+        $ref: '#/definitions/domain.Seniority'
+      status:
+        $ref: '#/definitions/domain.Status'
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   domain.Requirement:
     enum:
     - required
@@ -181,6 +196,24 @@ definitions:
       message:
         type: string
     type: object
+  response.Page-domain_ListItem:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.ListItem'
+        type: array
+      pagination:
+        $ref: '#/definitions/response.Pagination'
+    type: object
+  response.Pagination:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
 info:
   contact: {}
   description: Existing backend foundation endpoints. Health is liveness only; login
@@ -259,6 +292,21 @@ paths:
     get:
       consumes:
       - application/json
+      parameters:
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        maximum: 2147483647
+        minimum: 0
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
@@ -269,9 +317,7 @@ paths:
             - $ref: '#/definitions/response.Envelope'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/handler.JDResponse'
-                  type: array
+                  $ref: '#/definitions/response.Page-domain_ListItem'
               type: object
         "400":
           description: Bad Request
