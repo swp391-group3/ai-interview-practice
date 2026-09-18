@@ -1,0 +1,558 @@
+basePath: /
+definitions:
+  apperror.Code:
+    enum:
+    - JD_IN_USE
+    - JD_NOT_FOUND
+    - INVALID_CREDENTIALS
+    - USER_NOT_FOUND
+    - USER_INACTIVE
+    - INVALID_TOKEN
+    - VALIDATION_ERROR
+    - INTERNAL_ERROR
+    - INVALID_JD_INPUT
+    - JD_TOO_SHORT
+    - JD_TOO_LONG
+    - EXTRACTION_FAILED
+    - INVALID_EXTRACTION_OUTPUT
+    type: string
+    x-enum-varnames:
+    - CodeJDInUse
+    - CodeJDNotFound
+    - CodeInvalidCredentials
+    - CodeAccountNotFound
+    - CodeAccountLocked
+    - CodeInvalidToken
+    - CodeValidation
+    - CodeInternal
+    - CodeInvalidJDInput
+    - CodeJDTooShort
+    - CodeJDTooLong
+    - CodeExtractionFailed
+    - CodeInvalidExtractionOutput
+  auth.LoginRequest:
+    properties:
+      email:
+        example: jane@example.com
+        type: string
+      password:
+        example: SuperSecret123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  domain.ExtractedSkill:
+    properties:
+      category:
+        $ref: '#/definitions/domain.SkillCategory'
+      name:
+        type: string
+      requirement:
+        allOf:
+        - $ref: '#/definitions/domain.Requirement'
+        description: Empty means the JD does not state whether the skill is required
+          or preferred.
+    type: object
+  domain.ListItem:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      seniorityLevel:
+        $ref: '#/definitions/domain.Seniority'
+      status:
+        $ref: '#/definitions/domain.Status'
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  domain.Requirement:
+    enum:
+    - required
+    - preferred
+    type: string
+    x-enum-varnames:
+    - Required
+    - Preferred
+  domain.Seniority:
+    enum:
+    - intern
+    - junior
+    - mid
+    - senior
+    - lead
+    type: string
+    x-enum-varnames:
+    - Intern
+    - Junior
+    - Mid
+    - Senior
+    - Lead
+  domain.SkillCategory:
+    enum:
+    - programming_language
+    - framework
+    - database
+    - tool
+    - technology
+    - other
+    type: string
+    x-enum-varnames:
+    - ProgrammingLanguage
+    - Framework
+    - Database
+    - Tool
+    - Technology
+    - Other
+  domain.Status:
+    enum:
+    - uploaded
+    - parsing
+    - parsed
+    - customized
+    - locked
+    - failed
+    type: string
+    x-enum-varnames:
+    - StatusUploaded
+    - StatusParsing
+    - StatusParsed
+    - StatusCustomized
+    - StatusLocked
+    - StatusFailed
+  domain.StructuredJD:
+    properties:
+      domainKnowledge:
+        items:
+          type: string
+        type: array
+      seniorityLevel:
+        $ref: '#/definitions/domain.Seniority'
+      skills:
+        items:
+          $ref: '#/definitions/domain.ExtractedSkill'
+        type: array
+      technologies:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  handler.AnalyzeJDRequest:
+    properties:
+      rawText:
+        type: string
+    required:
+    - rawText
+    type: object
+  handler.CreateJDRequest:
+    properties:
+      rawText:
+        type: string
+      structuredJD:
+        $ref: '#/definitions/domain.StructuredJD'
+    required:
+    - rawText
+    - structuredJD
+    type: object
+  handler.JDResponse:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      rawText:
+        type: string
+      status:
+        $ref: '#/definitions/domain.Status'
+      structuredJD:
+        $ref: '#/definitions/domain.StructuredJD'
+      updatedAt:
+        type: string
+    type: object
+  handler.UpdateJDRequest:
+    properties:
+      structuredJD:
+        $ref: '#/definitions/domain.StructuredJD'
+    required:
+    - structuredJD
+    type: object
+  response.Envelope:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/response.ErrorBody'
+      success:
+        type: boolean
+    type: object
+  response.ErrorBody:
+    properties:
+      code:
+        $ref: '#/definitions/apperror.Code'
+      message:
+        type: string
+    type: object
+  response.Page-domain_ListItem:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/domain.ListItem'
+        type: array
+      pagination:
+        $ref: '#/definitions/response.Pagination'
+    type: object
+  response.Pagination:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: Existing backend foundation endpoints. Health is liveness only; login
+    returns a normalized envelope.
+  title: AI Interview Practice API
+  version: 1.0.0
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Returns an access token in data and sets the refresh cookie scoped
+        to /auth/refresh. A refresh endpoint is not currently registered.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access token
+          headers:
+            Set-Cookie:
+              description: Refresh token cookie; Path=/auth/refresh
+              type: string
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "403":
+          description: Account locked
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "404":
+          description: Account not found
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      summary: Log in with email and password
+      tags:
+      - auth
+  /health:
+    get:
+      description: Does not check database or LLM readiness.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Check process liveness
+      tags:
+      - health
+  /jds:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        maximum: 2147483647
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/response.Page-domain_ListItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - BearerAuth: []
+      summary: List current user's JDs
+      tags:
+      - jds
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: JD request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateJDRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.JDResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Save a reviewed JD
+      tags:
+      - jds
+  /jds/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: JD UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Delete an owned JD
+      tags:
+      - jds
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: JD UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.JDResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Get an owned JD
+      tags:
+      - jds
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: JD request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateJDRequest'
+      - description: JD UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.JDResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Update reviewed fields; original raw text is immutable
+      tags:
+      - jds
+  /jds/analyze:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: JD request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AnalyzeJDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Envelope'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.StructuredJD'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/response.Envelope'
+      security:
+      - BearerAuth: []
+      summary: Analyze a raw JD without saving
+      tags:
+      - jds
+securityDefinitions:
+  BearerAuth:
+    description: Bearer access token, formatted as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
