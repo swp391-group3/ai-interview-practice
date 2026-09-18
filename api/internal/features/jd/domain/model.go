@@ -84,6 +84,16 @@ type JD struct {
 	UpdatedAt    time.Time
 }
 
+// ListItem contains the summary fields of a persisted job description.
+type ListItem struct {
+	ID             uuid.UUID `json:"id"`
+	Title          string    `json:"title"`
+	SeniorityLevel Seniority `json:"seniorityLevel"`
+	Status         Status    `json:"status"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+}
+
 // CreateInput contains the original JD text and its reviewed structure.
 type CreateInput struct {
 	RawText      string

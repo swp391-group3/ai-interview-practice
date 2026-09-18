@@ -115,8 +115,8 @@ func TestJDRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 	for user, id := range map[uuid.UUID]uuid.UUID{owner: created.ID, other: otherJD.ID} {
-		listed, err := repo.List(ctx, user)
-		if err != nil || len(listed) != 1 || listed[0].ID != id || listed[0].UserID != user {
+		listed, total, err := repo.List(ctx, user, 20, 0)
+		if err != nil || total != 1 || len(listed) != 1 || listed[0].ID != id || listed[0].Title != input.StructuredJD.Title || listed[0].SeniorityLevel != seniority {
 			t.Fatalf("list ownership: %+v, %v", listed, err)
 		}
 	}
@@ -164,11 +164,35 @@ func TestJDRepository(t *testing.T) {
 	_, err = repo.Get(ctx, owner, created.ID)
 	assertNotFound(err)
 	assertNotFound(repo.Delete(ctx, owner, created.ID))
-	listed, err := repo.List(ctx, owner)
-	if err != nil || len(listed) != 0 {
+	listed, total, err := repo.List(ctx, owner, 20, 0)
+	if err != nil || total != 0 || len(listed) != 0 {
 		t.Fatalf("list after delete: %+v, %v", listed, err)
 	}
 	if _, err := repo.Get(ctx, other, otherJD.ID); err != nil {
 		t.Fatal(err)
+	}
+	// Tied timestamps must use descending IDs; newer timestamps take precedence.
+	ids := []string{"00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000001"}
+	for i, id := range ids {
+		createdAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+		if i == 2 {
+			createdAt = createdAt.Add(time.Hour)
+		}
+		if _, err := db.Pool.Exec(ctx, "INSERT INTO job_descriptions (id, user_id, title, seniority_level, raw_text, parsed_data, created_at) VALUES ($1, $2, 'Summary', 'senior', 'large raw text', '[]', $3)", id, owner, createdAt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for offset, wantID := range []string{ids[2], ids[0], ids[1], ""} {
+		items, total, err := repo.List(ctx, owner, 1, int32(offset))
+		if err != nil || total != 3 {
+			t.Fatalf("page total=%d err=%v", total, err)
+		}
+		if wantID == "" {
+			if len(items) != 0 {
+				t.Fatalf("expected empty page: %+v", items)
+			}
+		} else if len(items) != 1 || items[0].ID.String() != wantID {
+			t.Fatalf("offset %d: %+v", offset, items)
+		}
 	}
 }

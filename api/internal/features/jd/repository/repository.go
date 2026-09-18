@@ -28,24 +28,24 @@ func (r *Repository) Create(ctx context.Context, userID uuid.UUID, input domain.
 	if err != nil {
 		return domain.JD{}, err
 	}
-	row, err := r.queries.CreateJD(ctx, CreateJDParams{UserID: userID, Title: input.StructuredJD.Title, SeniorityLevel: SeniorityLevel(*input.StructuredJD.SeniorityLevel), RawText: input.RawText, ParsedData: data})
+	row, err := r.queries.CreateCustomizedJD(ctx, CreateCustomizedJDParams{UserID: userID, Title: input.StructuredJD.Title, SeniorityLevel: SeniorityLevel(*input.StructuredJD.SeniorityLevel), RawText: input.RawText, ParsedData: data})
 	return decodeJD(row, err)
 }
 
-func (r *Repository) List(ctx context.Context, userID uuid.UUID) ([]domain.JD, error) {
-	rows, err := r.queries.ListJDs(ctx, userID)
+func (r *Repository) List(ctx context.Context, userID uuid.UUID, limit, offset int32) ([]domain.ListItem, int64, error) {
+	rows, err := r.queries.ListJDs(ctx, ListJDsParams{UserID: userID, PageLimit: limit, PageOffset: offset})
 	if err != nil {
-		return nil, persistenceError(err)
+		return nil, 0, persistenceError(err)
 	}
-	result := make([]domain.JD, 0, len(rows))
+	total, err := r.queries.CountJDs(ctx, userID)
+	if err != nil {
+		return nil, 0, persistenceError(err)
+	}
+	result := make([]domain.ListItem, 0, len(rows))
 	for _, row := range rows {
-		jd, err := decodeJD(row, nil)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, jd)
+		result = append(result, domain.ListItem{ID: row.ID, Title: row.Title, SeniorityLevel: domain.Seniority(row.SeniorityLevel), Status: domain.Status(row.Status), CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time})
 	}
-	return result, nil
+	return result, total, nil
 }
 
 func (r *Repository) Get(ctx context.Context, userID, id uuid.UUID) (domain.JD, error) {

@@ -11,11 +11,12 @@ import (
 )
 
 type fakeRepository struct {
-	calls    int
-	user, id uuid.UUID
-	create   domain.CreateInput
-	update   domain.UpdateInput
-	err      error
+	calls         int
+	user, id      uuid.UUID
+	create        domain.CreateInput
+	update        domain.UpdateInput
+	err           error
+	limit, offset int32
 }
 
 func (f *fakeRepository) Create(_ context.Context, u uuid.UUID, in domain.CreateInput) (domain.JD, error) {
@@ -24,10 +25,11 @@ func (f *fakeRepository) Create(_ context.Context, u uuid.UUID, in domain.Create
 	f.create = in
 	return domain.JD{}, f.err
 }
-func (f *fakeRepository) List(_ context.Context, u uuid.UUID) ([]domain.JD, error) {
+func (f *fakeRepository) List(_ context.Context, u uuid.UUID, limit, offset int32) ([]domain.ListItem, int64, error) {
 	f.calls++
 	f.user = u
-	return nil, f.err
+	f.limit, f.offset = limit, offset
+	return nil, 0, f.err
 }
 func (f *fakeRepository) Get(_ context.Context, u, id uuid.UUID) (domain.JD, error) {
 	f.calls++
@@ -76,7 +78,7 @@ func TestApplicationBoundaries(t *testing.T) {
 	repo.err = sentinel
 	operations := []func() error{
 		func() error { _, e := app.Create(ctx, user, create); return e },
-		func() error { _, e := app.List(ctx, user); return e },
+		func() error { _, _, e := app.List(ctx, user, 10, 5); return e },
 		func() error { _, e := app.Get(ctx, user, id); return e },
 		func() error { _, e := app.Update(ctx, user, id, update); return e },
 		func() error { return app.Delete(ctx, user, id) },
@@ -92,6 +94,9 @@ func TestApplicationBoundaries(t *testing.T) {
 	}
 	if repo.create.RawText != create.RawText || repo.update.StructuredJD.Title != result.Title {
 		t.Fatal("inputs changed")
+	}
+	if repo.limit != 10 || repo.offset != 5 {
+		t.Fatal("pagination not forwarded")
 	}
 }
 

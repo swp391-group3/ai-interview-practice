@@ -9,15 +9,28 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createJD = `-- name: CreateJD :one
+const countJDs = `-- name: CountJDs :one
+SELECT count(*) FROM job_descriptions
+WHERE user_id = $1
+`
+
+func (q *Queries) CountJDs(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countJDs, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createCustomizedJD = `-- name: CreateCustomizedJD :one
 INSERT INTO job_descriptions (user_id, title, seniority_level, raw_text, parsed_data, status)
 VALUES ($1, $2, $3, $4, $5, 'customized')
 RETURNING id, user_id, title, seniority_level, raw_text, parsed_data, status, created_at, updated_at
 `
 
-type CreateJDParams struct {
+type CreateCustomizedJDParams struct {
 	UserID         uuid.UUID
 	Title          string
 	SeniorityLevel SeniorityLevel
@@ -25,8 +38,8 @@ type CreateJDParams struct {
 	ParsedData     []byte
 }
 
-func (q *Queries) CreateJD(ctx context.Context, arg CreateJDParams) (JobDescription, error) {
-	row := q.db.QueryRow(ctx, createJD,
+func (q *Queries) CreateCustomizedJD(ctx context.Context, arg CreateCustomizedJDParams) (JobDescription, error) {
+	row := q.db.QueryRow(ctx, createCustomizedJD,
 		arg.UserID,
 		arg.Title,
 		arg.SeniorityLevel,
@@ -94,27 +107,40 @@ func (q *Queries) GetJD(ctx context.Context, arg GetJDParams) (JobDescription, e
 }
 
 const listJDs = `-- name: ListJDs :many
-SELECT id, user_id, title, seniority_level, raw_text, parsed_data, status, created_at, updated_at FROM job_descriptions
+SELECT id, title, seniority_level, status, created_at, updated_at FROM job_descriptions
 WHERE user_id = $1
 ORDER BY created_at DESC, id DESC
+LIMIT $3 OFFSET $2
 `
 
-func (q *Queries) ListJDs(ctx context.Context, userID uuid.UUID) ([]JobDescription, error) {
-	rows, err := q.db.Query(ctx, listJDs, userID)
+type ListJDsParams struct {
+	UserID     uuid.UUID
+	PageOffset int32
+	PageLimit  int32
+}
+
+type ListJDsRow struct {
+	ID             uuid.UUID
+	Title          string
+	SeniorityLevel SeniorityLevel
+	Status         JdStatus
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+func (q *Queries) ListJDs(ctx context.Context, arg ListJDsParams) ([]ListJDsRow, error) {
+	rows, err := q.db.Query(ctx, listJDs, arg.UserID, arg.PageOffset, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []JobDescription
+	var items []ListJDsRow
 	for rows.Next() {
-		var i JobDescription
+		var i ListJDsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
 			&i.Title,
 			&i.SeniorityLevel,
-			&i.RawText,
-			&i.ParsedData,
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,

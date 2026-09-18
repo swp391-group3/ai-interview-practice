@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +19,7 @@ import (
 type JDService interface {
 	Analyze(context.Context, string) (domain.StructuredJD, error)
 	Create(context.Context, uuid.UUID, domain.CreateInput) (domain.JD, error)
-	List(context.Context, uuid.UUID) ([]domain.JD, error)
+	List(context.Context, uuid.UUID, int32, int32) ([]domain.ListItem, int64, error)
 	Get(context.Context, uuid.UUID, uuid.UUID) (domain.JD, error)
 	Update(context.Context, uuid.UUID, uuid.UUID, domain.UpdateInput) (domain.JD, error)
 	Delete(context.Context, uuid.UUID, uuid.UUID) error
@@ -154,7 +155,9 @@ func (h *JDHandler) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} response.Envelope{data=[]JDResponse}
+// @Param limit query int false "Page size" default(20) minimum(1) maximum(100)
+// @Param offset query int false "Number of items to skip" default(0) minimum(0) maximum(2147483647)
+// @Success 200 {object} response.Envelope{data=response.Page[domain.ListItem]}
 // @Failure 400 {object} response.Envelope
 // @Failure 401 {object} response.Envelope
 // @Failure 500 {object} response.Envelope
@@ -164,16 +167,30 @@ func (h *JDHandler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.service.List(c.Request.Context(), user)
+	limit, offset := int32(20), int32(0)
+	for _, param := range []struct {
+		name     string
+		value    *int32
+		min, max int64
+	}{{"limit", &limit, 1, 100}, {"offset", &offset, 0, 2147483647}} {
+		if raw, exists := c.GetQueryArray(param.name); exists {
+			value, err := strconv.ParseInt(raw[0], 10, 32)
+			if len(raw) != 1 || err != nil || value < param.min || value > param.max {
+				response.Error(c, apperror.New(apperror.CodeValidation, "invalid pagination parameters"))
+				return
+			}
+			*param.value = int32(value)
+		}
+	}
+	result, total, err := h.service.List(c.Request.Context(), user, limit, offset)
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
-	items := make([]JDResponse, 0, len(result))
-	for _, jd := range result {
-		items = append(items, jdResponse(jd))
+	if result == nil {
+		result = []domain.ListItem{}
 	}
-	response.OK(c, items)
+	response.OK(c, response.Page[domain.ListItem]{Items: result, Pagination: response.Pagination{Limit: limit, Offset: offset, Total: total}})
 }
 
 // Get godoc

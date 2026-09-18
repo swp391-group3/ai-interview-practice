@@ -1,12 +1,17 @@
--- name: CreateJD :one
+-- name: CreateCustomizedJD :one
 INSERT INTO job_descriptions (user_id, title, seniority_level, raw_text, parsed_data, status)
 VALUES (@user_id, @title, @seniority_level, @raw_text, @parsed_data, 'customized')
 RETURNING *;
 
 -- name: ListJDs :many
-SELECT * FROM job_descriptions
+SELECT id, title, seniority_level, status, created_at, updated_at FROM job_descriptions
 WHERE user_id = @user_id
-ORDER BY created_at DESC, id DESC;
+ORDER BY created_at DESC, id DESC
+LIMIT @page_limit OFFSET @page_offset;
+
+-- name: CountJDs :one
+SELECT count(*) FROM job_descriptions
+WHERE user_id = @user_id;
 
 -- name: GetJD :one
 SELECT * FROM job_descriptions
