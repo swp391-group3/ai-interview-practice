@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { site } from "@/config/site";
 import { AppProviders } from "@/providers/app-providers";
 
 const albertSans = localFont({
   src: [
     {
-      path: "../../design/exploration/datn/assets/fonts/open-design.ai/AlbertSans-VariableFont_wght-5ccc2f8f05.woff2",
+      path: "../assets/fonts/albert-sans/albert-sans-variable.woff2",
       weight: "100 900",
       style: "normal",
     },
     {
-      path: "../../design/exploration/datn/assets/fonts/open-design.ai/AlbertSans-Italic-VariableFont_wght-b6ad8b53d7.woff2",
+      path: "../assets/fonts/albert-sans/albert-sans-italic-variable.woff2",
       weight: "100 900",
       style: "italic",
     },
@@ -21,8 +22,11 @@ const albertSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "RoleCue — Technical interview practice",
-  description: "Role-focused practice for technical interviews.",
+  title: {
+    default: site.name,
+    template: `%s | ${site.name}`,
+  },
+  description: site.description,
 };
 export default function RootLayout({
   children,
